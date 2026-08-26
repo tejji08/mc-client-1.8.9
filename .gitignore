@@ -1,3 +1,5 @@
 .gradle/
 build/
 *.class
+run-stdout.log
+run-stderr.log

@@ -2,11 +2,11 @@
 
 Privacy-first, telemetry-free Minecraft client. Standalone launcher + curated mod bundle, built on Legacy Fabric. MC 1.8.9 priority. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-Status: milestone 1 written — launcher downloads vanilla 1.8.9 from Mojang (sha1-verified) and launches it in offline/dev mode, no auth or mods yet. **Untested — no JDK on this machine yet.**
+Status: milestone 1 **verified working** (2026-08-26) — launcher resolves 1.8.9 from Mojang's manifest, downloads + sha1-verifies the client jar/libraries/natives/assets, and launches straight to a live "Minecraft 1.8.9" window in offline/dev mode. No auth or mods yet.
 
 ## Building
 
-Needs JDK 17+ (not installed here as of 2026-08-26). No Gradle wrapper checked in yet — once a JDK is present, run `gradle wrapper` once to generate `gradlew`, then:
+Needs JDK 21 (Temurin, installed via winget). Gradle wrapper is checked in:
 
 ```
 ./gradlew :launcher:run
