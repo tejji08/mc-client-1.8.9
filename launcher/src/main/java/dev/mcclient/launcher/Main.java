@@ -1,6 +1,8 @@
 package dev.mcclient.launcher;
 
 import com.google.gson.JsonObject;
+import dev.mcclient.launcher.auth.SessionResolver;
+import dev.mcclient.launcher.auth.model.MinecraftSession;
 import dev.mcclient.launcher.mojang.GameDownloader;
 import dev.mcclient.launcher.mojang.VersionManifest;
 
@@ -9,12 +11,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 /**
- * Milestone 1: prove the pipeline. Downloads vanilla 1.8.9 straight from Mojang,
- * verifies everything by sha1, and launches it in offline/dev mode (no auth yet,
- * no mod loader yet). Real auth and Legacy Fabric come next.
+ * Milestone 2: real Microsoft sign-in. Downloads vanilla 1.8.9 straight from Mojang,
+ * verifies everything by sha1, signs in via the device-code flow (or reuses a cached
+ * session), and launches the real game. Falls back to offline/dev mode if no Azure
+ * client ID is configured. Legacy Fabric comes next.
  */
 public final class Main {
 
@@ -46,11 +48,13 @@ public final class Main {
         System.out.println("Downloading assets (this is the slow one, first run only)...");
         downloader.downloadAssets(versionDetails, LauncherPaths.assets());
 
+        MinecraftSession session = new SessionResolver(http).resolve();
+
         System.out.println("Launching...");
-        launch(versionDetails, clientJar, libraryClasspath, nativesDir);
+        launch(versionDetails, clientJar, libraryClasspath, nativesDir, session);
     }
 
-    private static void launch(JsonObject versionDetails, Path clientJar, List<Path> libraryClasspath, Path nativesDir) throws Exception {
+    private static void launch(JsonObject versionDetails, Path clientJar, List<Path> libraryClasspath, Path nativesDir, MinecraftSession session) throws Exception {
         String assetIndexId = versionDetails.getAsJsonObject("assetIndex").get("id").getAsString();
         Path gameDir = LauncherPaths.root().resolve("game");
         Files.createDirectories(gameDir);
@@ -68,14 +72,14 @@ public final class Main {
         command.add("-cp");
         command.add(classpath);
         command.add("net.minecraft.client.main.Main");
-        command.add("--username"); command.add("dev");
+        command.add("--username"); command.add(session.username());
         command.add("--version"); command.add("1.8.9");
         command.add("--gameDir"); command.add(gameDir.toString());
         command.add("--assetsDir"); command.add(LauncherPaths.assets().toString());
         command.add("--assetIndex"); command.add(assetIndexId);
-        command.add("--uuid"); command.add(UUID.randomUUID().toString().replace("-", ""));
-        command.add("--accessToken"); command.add("0");
-        command.add("--userType"); command.add("legacy");
+        command.add("--uuid"); command.add(session.uuid());
+        command.add("--accessToken"); command.add(session.accessToken());
+        command.add("--userType"); command.add(session.accessToken().equals("0") ? "legacy" : "msa");
         command.add("--width"); command.add("925");
         command.add("--height"); command.add("530");
 

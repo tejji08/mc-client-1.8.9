@@ -102,9 +102,12 @@ public final class GameDownloader {
                     continue;
                 }
                 Path dest = nativesDir.resolve(entry.getName());
+                if (Files.exists(dest)) {
+                    continue; // static per version; also avoids clobbering a DLL a running instance still has open
+                }
                 Files.createDirectories(dest.getParent());
                 try (var in = zip.getInputStream(entry)) {
-                    Files.copy(in, dest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    Files.copy(in, dest);
                 }
             }
         }
