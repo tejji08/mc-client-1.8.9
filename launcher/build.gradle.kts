@@ -20,3 +20,13 @@ dependencies {
 application {
     mainClass.set("dev.mcclient.launcher.Main")
 }
+
+/** Headless probe for Minecraft API allowlist approval -- see auth/ApprovalCheck.java. */
+tasks.register<JavaExec>("checkApproval") {
+    group = "verification"
+    description = "Checks whether the Azure app has cleared Minecraft API review."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("dev.mcclient.launcher.auth.ApprovalCheck")
+    // PENDING is a legitimate answer, not a build failure -- callers read the status line.
+    isIgnoreExitValue = true
+}

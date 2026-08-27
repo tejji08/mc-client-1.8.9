@@ -46,6 +46,12 @@ public final class SessionResolver {
             msTokens = deviceCodeAuth.authenticate();
         }
 
+        // Persist the refresh token before the Minecraft leg. That leg can fail for reasons
+        // unrelated to the Microsoft sign-in itself (notably a 403 while the Azure app is still
+        // waiting on Minecraft API allowlist approval) -- without this, a perfectly good refresh
+        // token gets thrown away and the next attempt needs another interactive device-code round.
+        cache.save(msTokens.refreshToken(), null);
+
         MinecraftSession session = minecraftAuth.authenticate(msTokens);
         cache.save(msTokens.refreshToken(), session);
         System.out.println("Signed in as " + session.username());
