@@ -3,9 +3,11 @@ package dev.mcclient.launcher;
 import com.google.gson.JsonObject;
 import dev.mcclient.launcher.auth.SessionResolver;
 import dev.mcclient.launcher.auth.model.MinecraftSession;
+import dev.mcclient.launcher.fabric.FabricProfile;
 import dev.mcclient.launcher.mojang.GameDownloader;
 import dev.mcclient.launcher.mojang.VersionManifest;
 
+import java.io.IOException;
 import java.net.http.HttpClient;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,17 +15,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Milestone 2: real Microsoft sign-in. Downloads vanilla 1.8.9 straight from Mojang,
- * verifies everything by sha1, signs in via the device-code flow (or reuses a cached
- * session), and launches the real game. Falls back to offline/dev mode if no Azure
- * client ID is configured. Legacy Fabric comes next.
+ * Milestone 3: Legacy Fabric mod loading. Downloads vanilla 1.8.9 straight from Mojang,
+ * verifies everything by sha1, resolves the Legacy Fabric loader profile, signs in via
+ * the device-code flow (or reuses a cached session), and boots through Fabric's Knot
+ * client entrypoint so mods/ gets scanned. Falls back to offline/dev mode if no Azure
+ * client ID is configured.
  */
 public final class Main {
 
     private static final String TARGET_VERSION = "1.8.9";
 
     public static void main(String[] args) throws Exception {
-        HttpClient http = HttpClient.newHttpClient();
+        HttpClient http = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();
         VersionManifest manifest = new VersionManifest(http);
         GameDownloader downloader = new GameDownloader(http);
 
@@ -48,18 +51,32 @@ public final class Main {
         System.out.println("Downloading assets (this is the slow one, first run only)...");
         downloader.downloadAssets(versionDetails, LauncherPaths.assets());
 
+        System.out.println("Resolving Legacy Fabric loader...");
+        FabricProfile.Resolved fabric = new FabricProfile(http).resolve(TARGET_VERSION, LauncherPaths.libraries(), nativesDir);
+        System.out.println("Fabric main class: " + fabric.mainClass());
+
         MinecraftSession session = new SessionResolver(http).resolve();
 
         System.out.println("Launching...");
-        launch(versionDetails, clientJar, libraryClasspath, nativesDir, session);
+        launch(versionDetails, clientJar, libraryClasspath, nativesDir, session, fabric);
     }
 
-    private static void launch(JsonObject versionDetails, Path clientJar, List<Path> libraryClasspath, Path nativesDir, MinecraftSession session) throws Exception {
+    private static void launch(JsonObject versionDetails, Path clientJar, List<Path> libraryClasspath, Path nativesDir, MinecraftSession session, FabricProfile.Resolved fabric) throws Exception {
         String assetIndexId = versionDetails.getAsJsonObject("assetIndex").get("id").getAsString();
         Path gameDir = LauncherPaths.root().resolve("game");
+        Path modsDir = gameDir.resolve("mods");
         Files.createDirectories(gameDir);
+        Files.createDirectories(modsDir);
+        syncDevMods(modsDir);
 
-        List<Path> fullClasspath = new ArrayList<>(libraryClasspath);
+        // Fabric supplies its own patched LWJGL etc. -- drop the vanilla copies of anything it replaces
+        // so the JVM doesn't load two different builds of the same class off the classpath.
+        List<Path> filteredVanilla = libraryClasspath.stream()
+                .filter(p -> fabric.replacedArtifacts().stream().noneMatch(ga -> p.toString().replace('\\', '/').contains("/" + ga.split(":")[0].replace('.', '/') + "/" + ga.split(":")[1] + "/")))
+                .toList();
+
+        List<Path> fullClasspath = new ArrayList<>(fabric.classpath());
+        fullClasspath.addAll(filteredVanilla);
         fullClasspath.add(clientJar);
         String classpath = fullClasspath.stream()
                 .map(Path::toString)
@@ -71,7 +88,7 @@ public final class Main {
         command.add("-Djava.library.path=" + nativesDir);
         command.add("-cp");
         command.add(classpath);
-        command.add("net.minecraft.client.main.Main");
+        command.add(fabric.mainClass());
         command.add("--username"); command.add(session.username());
         command.add("--version"); command.add("1.8.9");
         command.add("--gameDir"); command.add(gameDir.toString());
@@ -88,6 +105,30 @@ public final class Main {
         pb.inheritIO();
         Process process = pb.start();
         process.waitFor();
+    }
+
+    /** Dev convenience: copies any built mods/*&#47;build/libs/*.jar into the game's mods folder, so `./gradlew :launcher:run` always launches with whatever's freshly built. */
+    private static void syncDevMods(Path modsDir) throws IOException {
+        Path modsSourceRoot = Path.of("..", "mods");
+        if (!Files.isDirectory(modsSourceRoot)) {
+            return;
+        }
+        try (var modProjects = Files.list(modsSourceRoot)) {
+            for (Path modProject : (Iterable<Path>) modProjects::iterator) {
+                Path libs = modProject.resolve("build").resolve("libs");
+                if (!Files.isDirectory(libs)) {
+                    continue;
+                }
+                try (var jars = Files.list(libs)) {
+                    for (Path jar : (Iterable<Path>) jars::iterator) {
+                        if (jar.toString().endsWith(".jar")) {
+                            Files.copy(jar, modsDir.resolve(jar.getFileName()), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                            System.out.println("Synced dev mod: " + jar.getFileName());
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private static String resolveJavaBinary() {
