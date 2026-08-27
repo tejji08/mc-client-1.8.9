@@ -32,8 +32,16 @@ public final class DeviceCodeAuth {
         this.clientId = clientId;
     }
 
-    /** Runs the full device-code flow, printing the sign-in instructions, and blocks until the user completes it. */
+    /** Runs the full device-code flow, printing the instructions, and blocks until sign-in completes. */
     public MicrosoftTokens authenticate() throws IOException, InterruptedException {
+        return authenticate(SignInPrompt.CONSOLE);
+    }
+
+    /**
+     * Runs the full device-code flow, handing the sign-in instructions to {@code prompt}, and
+     * blocks until the user completes it.
+     */
+    public MicrosoftTokens authenticate(SignInPrompt prompt) throws IOException, InterruptedException {
         JsonObject deviceCodeResponse = requestDeviceCode();
 
         String deviceCode = deviceCodeResponse.get("device_code").getAsString();
@@ -42,11 +50,17 @@ public final class DeviceCodeAuth {
         int intervalSeconds = deviceCodeResponse.has("interval") ? deviceCodeResponse.get("interval").getAsInt() : 5;
         int expiresInSeconds = deviceCodeResponse.get("expires_in").getAsInt();
 
-        System.out.println();
-        System.out.println("  Go to: " + verificationUri);
-        System.out.println("  Enter code: " + userCode);
-        System.out.println();
+        prompt.show(verificationUri, userCode);
 
+        try {
+            return poll(deviceCode, intervalSeconds, expiresInSeconds);
+        } finally {
+            prompt.dismiss();
+        }
+    }
+
+    private MicrosoftTokens poll(String deviceCode, int intervalSeconds, int expiresInSeconds)
+            throws IOException, InterruptedException {
         long deadline = System.currentTimeMillis() + expiresInSeconds * 1000L;
         while (System.currentTimeMillis() < deadline) {
             Thread.sleep(intervalSeconds * 1000L);

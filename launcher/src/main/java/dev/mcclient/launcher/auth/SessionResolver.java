@@ -1,5 +1,6 @@
 package dev.mcclient.launcher.auth;
 
+import dev.mcclient.launcher.Progress;
 import dev.mcclient.launcher.auth.model.MicrosoftTokens;
 import dev.mcclient.launcher.auth.model.MinecraftSession;
 
@@ -21,9 +22,14 @@ public final class SessionResolver {
     }
 
     public MinecraftSession resolve() throws Exception {
+        return resolve(Progress.CONSOLE, SignInPrompt.CONSOLE);
+    }
+
+    /** Same flow, but reporting to a caller-supplied UI instead of stdout. */
+    public MinecraftSession resolve(Progress progress, SignInPrompt prompt) throws Exception {
         String clientId = Config.clientId();
         if (clientId == null) {
-            System.out.println("No Azure client ID configured (see auth/Config.java) — running offline/dev mode.");
+            progress.status("No Azure client ID configured (see auth/Config.java) - running offline/dev mode.");
             return offlineSession();
         }
 
@@ -32,18 +38,18 @@ public final class SessionResolver {
 
         MinecraftSession cached = cache.session();
         if (cached != null && !cached.isExpired()) {
-            System.out.println("Reusing cached session for " + cached.username());
+            progress.status("Reusing cached session for " + cached.username());
             return cached;
         }
 
         String refreshToken = cache.refreshToken();
         MicrosoftTokens msTokens;
         if (refreshToken != null) {
-            System.out.println("Refreshing Microsoft sign-in silently...");
+            progress.status("Refreshing Microsoft sign-in silently...");
             msTokens = deviceCodeAuth.refresh(refreshToken);
         } else {
-            System.out.println("Sign-in required.");
-            msTokens = deviceCodeAuth.authenticate();
+            progress.status("Sign-in required.");
+            msTokens = deviceCodeAuth.authenticate(prompt);
         }
 
         // Persist the refresh token before the Minecraft leg. That leg can fail for reasons
@@ -54,7 +60,7 @@ public final class SessionResolver {
 
         MinecraftSession session = minecraftAuth.authenticate(msTokens);
         cache.save(msTokens.refreshToken(), session);
-        System.out.println("Signed in as " + session.username());
+        progress.status("Signed in as " + session.username());
         return session;
     }
 

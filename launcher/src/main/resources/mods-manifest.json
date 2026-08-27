@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "minecraftVersion": "1.8.9",
+  "loader": "legacy-fabric",
+  "mods": [
+    {
+      "id": "legacy-fabric-api",
+      "name": "Legacy Fabric API",
+      "version": "1.8.0",
+      "description": "Core API most Legacy Fabric mods compile against. Install it or they won't load.",
+      "category": "library",
+      "url": "https://cdn.modrinth.com/data/9CJED7xi/versions/uK2RKi8B/legacy-fabric-api-1.8.0.jar",
+      "sha256": "6b47e3046328f8873d5e744c0194bb38240579935815cdf65dda6df93553b695",
+      "sizeBytes": 985512,
+      "sourceUrl": "https://github.com/Legacy-Fabric/fabric",
+      "license": "Apache-2.0",
+      "required": false,
+      "enabledByDefault": true
+    },
+    {
+      "id": "fpsdisplay",
+      "name": "FPS - Display",
+      "version": "3.1.0+1.8.9",
+      "description": "Lightweight FPS counter in the HUD.",
+      "category": "utility",
+      "url": "https://cdn.modrinth.com/data/DIlqwRFH/versions/G0lqK9Js/fpsdisplay-3.1.0%2B1.8.9.jar",
+      "sha256": "7aec5baeded6428c4d2e456b2f76395c2a3e0af981ba4569bca4bb2f2b9573ca",
+      "sizeBytes": 20738,
+      "sourceUrl": "https://github.com/Grayray75/FPS-Display",
+      "license": "LGPL-3.0-only",
+      "required": false,
+      "enabledByDefault": true
+    },
+    {
+      "id": "ksyxis",
+      "name": "Ksyxis",
+      "version": "1.4.3",
+      "description": "Skips the pointless chunk pre-load on world join, cutting load times sharply.",
+      "category": "performance",
+      "url": "https://cdn.modrinth.com/data/2ecVyZ49/versions/kL32PN9Q/Ksyxis-1.4.3.jar",
+      "sha256": "23c8c5993004f0584eb27b19b4397b7aa8833f41b8f2d1ea201ee54a60f964b9",
+      "sizeBytes": 26968,
+      "sourceUrl": "https://github.com/VidTu/Ksyxis",
+      "license": "MIT",
+      "required": false,
+      "enabledByDefault": true
+    },
+    {
+      "id": "yosbr",
+      "name": "Your Options Shall Be Respected (YOSBR)",
+      "version": "0.1.1",
+      "description": "Stops the game overwriting your options.txt on first launch.",
+      "category": "utility",
+      "url": "https://cdn.modrinth.com/data/WwbubTsV/versions/0.1.1/yosbr-0.1.1.jar",
+      "sha256": "797b4096ccf2b22a76a28471836a178316042a2f490faea02ab25b75edd5c77a",
+      "sizeBytes": 19206,
+      "sourceUrl": "https://github.com/shedaniel/your-options-shall-be-respected",
+      "license": "LGPL-3.0-only",
+      "required": false,
+      "enabledByDefault": false
+    }
+  ]
+}
