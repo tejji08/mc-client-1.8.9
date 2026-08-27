@@ -51,7 +51,7 @@ public final class LauncherSettings {
         root.addProperty("memoryMb", memoryMb);
         root.addProperty("width", width);
         root.addProperty("height", height);
-        Files.createDirectories(file.getParent());
+        LauncherPaths.ensureDirectory(file.getParent());
         Files.writeString(file, root.toString(), StandardCharsets.UTF_8);
     }
 

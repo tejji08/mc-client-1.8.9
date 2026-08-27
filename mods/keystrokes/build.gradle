@@ -1,0 +1,26 @@
+// Groovy rather than Kotlin DSL: legacy-looming's `legacy.yarn(...)` helper is a Groovy
+// extension, and matching upstream's template exactly is worth more here than DSL consistency.
+plugins {
+    id "net.fabricmc.fabric-loom-remap" version "1.16-SNAPSHOT"
+    id "legacy-looming" version "1.16-SNAPSHOT"
+}
+
+version = "1.0.0"
+group = "dev.mcclient"
+base { archivesName = "keystrokes" }
+
+dependencies {
+    minecraft "com.mojang:minecraft:1.8.9"
+    mappings(legacy.yarn("1.8.9", "604"))
+    modImplementation "net.fabricmc:fabric-loader:0.18.3"
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = "UTF-8"
+    it.options.release = 8
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}

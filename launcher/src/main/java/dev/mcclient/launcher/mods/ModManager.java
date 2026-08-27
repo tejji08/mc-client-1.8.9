@@ -87,7 +87,7 @@ public final class ModManager {
      */
     public void install(ModEntry entry, Progress progress) throws IOException, InterruptedException {
         progress.status("Downloading " + entry.name() + " " + entry.displayVersion() + "...");
-        Files.createDirectories(store);
+        LauncherPaths.ensureDirectory(store);
         Path temp = Files.createTempFile(store, entry.id(), ".partial");
         try {
             download(entry.url(), temp, entry.sizeBytes(), progress);
@@ -147,7 +147,7 @@ public final class ModManager {
      * Files the user dropped in by hand are left alone.
      */
     public List<InstalledMod> syncToGameDir(Path gameModsDir, Progress progress) throws IOException {
-        Files.createDirectories(gameModsDir);
+        LauncherPaths.ensureDirectory(gameModsDir);
         List<InstalledMod> resolved = resolveAll();
 
         Set<String> wanted = new HashSet<>();

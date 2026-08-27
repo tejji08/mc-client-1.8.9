@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "bedwars-hud",
+  "version": "1.0.0",
+  "name": "Bed Wars HUD",
+  "description": "Condenses the Hypixel Bed Wars sidebar into a compact per-team bed/alive readout. Reformats the scoreboard the client already receives.",
+  "environment": "client",
+  "entrypoints": {
+    "main": [ "dev.mcclient.bedwars.BedwarsMod" ]
+  },
+  "mixins": [ "bedwars-hud.mixins.json" ],
+  "depends": {
+    "fabricloader": ">=0.18.0",
+    "minecraft": "1.8.9"
+  }
+}

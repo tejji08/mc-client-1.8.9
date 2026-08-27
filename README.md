@@ -17,6 +17,14 @@ Locally built jars from `mods/` cannot be pinned (they change every build), so t
 ### Minecraft API approval
 Since 2022 every new Azure app must be manually allowlisted before `api.minecraftservices.com` will accept it — until then the final auth leg returns HTTP 403 `Invalid app registration`, no matter how correct the config is. Submit the app at <https://aka.ms/mce-reviewappid>. `./gradlew :launcher:checkApproval` probes the current state headlessly (exit 0 approved / 1 failed / 2 pending) using the cached refresh token, with no interactive prompt.
 
+### The mods
+Two real client mods ship in-tree, both built with Legacy Fabric's Loom toolchain and both Hypixel-legal (they reformat information the client already has; neither automates input nor reveals anything hidden):
+
+- **`mods/keystrokes`** — WASD + mouse display with a rolling CPS counter. Config: `config/keystrokes.properties`.
+- **`mods/bedwars-hud`** — condenses the Hypixel Bed Wars sidebar into one colour-coded row per team (bed up / players left / eliminated). Config: `config/bedwars-hud.properties`.
+
+The Bed Wars scoreboard parser is deliberately free of Minecraft types so it can be unit-tested against real sidebar text (`./gradlew :mods:bedwars-hud:test`) — the only other place to exercise it is a live Hypixel game.
+
 ### Modding
 Each subproject under `mods/` is a normal Fabric mod (`fabric.mod.json` + a `ModInitializer`), compiled against `net.fabricmc:fabric-loader`. `./gradlew :launcher:run` auto-copies every built `mods/*/build/libs/*.jar` into the game's `mods/` folder before each launch — build a mod, run the launcher, it's loaded. See `mods/example-mod` for the minimal shape.
 
@@ -25,13 +33,12 @@ The launcher needs its own Azure AD app registration (public client, personal Mi
 
 ## Building
 
-Needs JDK 21 (Temurin, installed via winget). Gradle wrapper is checked in:
+Needs JDK 21 (Temurin, installed via winget). Gradle wrapper is checked in (9.7.1 — Legacy Fabric's Loom requires Gradle 9.4+):
 
 ```
 ./gradlew :launcher:run
 ```
 
 ## Next up
-- First *real* utility mod (example-mod is just a log line)
 - Real end-to-end test of the Microsoft sign-in flow (blocked on the approval above)
 - Performance-mod survey of the Legacy Fabric ecosystem before writing anything new

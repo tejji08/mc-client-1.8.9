@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "keystrokes",
+  "version": "1.0.0",
+  "name": "Keystrokes",
+  "description": "WASD + mouse button display with a rolling CPS counter. Reads local input state only.",
+  "environment": "client",
+  "entrypoints": {
+    "main": [ "dev.mcclient.keystrokes.KeystrokesMod" ]
+  },
+  "mixins": [ "keystrokes.mixins.json" ],
+  "depends": {
+    "fabricloader": ">=0.18.0",
+    "minecraft": "1.8.9"
+  }
+}

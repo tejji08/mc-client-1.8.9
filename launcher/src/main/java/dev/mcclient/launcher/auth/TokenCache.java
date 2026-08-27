@@ -38,7 +38,7 @@ public final class TokenCache {
     }
 
     public void save(String msRefreshToken, MinecraftSession session) throws IOException {
-        Files.createDirectories(file.getParent());
+        LauncherPaths.ensureDirectory(file.getParent());
         Files.writeString(file, GSON.toJson(new CacheData(msRefreshToken, session)));
     }
 

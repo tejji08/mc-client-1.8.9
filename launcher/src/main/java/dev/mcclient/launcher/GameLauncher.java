@@ -48,7 +48,7 @@ public final class GameLauncher {
         JsonObject versionDetails = manifest.fetchVersionDetails(versionUrl);
 
         Path versionDir = LauncherPaths.versions().resolve(TARGET_VERSION);
-        Files.createDirectories(versionDir);
+        LauncherPaths.ensureDirectory(versionDir);
         Path nativesDir = versionDir.resolve("natives");
 
         progress.status("Downloading client jar...");
@@ -70,7 +70,7 @@ public final class GameLauncher {
         mods.installMissing(progress);
 
         Path gameDir = LauncherPaths.root().resolve("game");
-        Files.createDirectories(gameDir);
+        LauncherPaths.ensureDirectory(gameDir);
         List<InstalledMod> loaded = mods.syncToGameDir(gameDir.resolve("mods"), progress);
         for (InstalledMod mod : loaded) {
             if (mod.willLaunch()) {

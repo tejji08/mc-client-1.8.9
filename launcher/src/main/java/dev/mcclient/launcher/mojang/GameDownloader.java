@@ -1,5 +1,6 @@
 package dev.mcclient.launcher.mojang;
 
+import dev.mcclient.launcher.LauncherPaths;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -65,7 +66,7 @@ public final class GameDownloader {
 
     /** Downloads the natives jar for this OS (if any) and unpacks it (skipping META-INF) into nativesDir. */
     public void downloadAndExtractNatives(JsonObject versionDetails, Path librariesDir, Path nativesDir) throws IOException, InterruptedException {
-        Files.createDirectories(nativesDir);
+        LauncherPaths.ensureDirectory(nativesDir);
         String currentOs = currentOsName();
 
         for (JsonElement el : versionDetails.getAsJsonArray("libraries")) {
@@ -105,7 +106,7 @@ public final class GameDownloader {
                 if (Files.exists(dest)) {
                     continue; // static per version; also avoids clobbering a DLL a running instance still has open
                 }
-                Files.createDirectories(dest.getParent());
+                LauncherPaths.ensureDirectory(dest.getParent());
                 try (var in = zip.getInputStream(entry)) {
                     Files.copy(in, dest);
                 }
@@ -120,7 +121,7 @@ public final class GameDownloader {
         String indexId = assetIndexRef.get("id").getAsString();
 
         Path indexDir = assetsDir.resolve("indexes");
-        Files.createDirectories(indexDir);
+        LauncherPaths.ensureDirectory(indexDir);
         Path indexPath = indexDir.resolve(indexId + ".json");
         downloadVerified(indexUrl, assetIndexRef.get("sha1").getAsString(), indexPath);
 
@@ -173,7 +174,7 @@ public final class GameDownloader {
         if (Files.exists(dest) && sha1Of(dest).equalsIgnoreCase(expectedSha1)) {
             return;
         }
-        Files.createDirectories(dest.getParent());
+        LauncherPaths.ensureDirectory(dest.getParent());
 
         HttpRequest request = HttpRequest.newBuilder(URI.create(url)).GET().build();
         HttpResponse<byte[]> response = http.send(request, HttpResponse.BodyHandlers.ofByteArray());

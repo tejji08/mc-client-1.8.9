@@ -62,7 +62,7 @@ public final class ModState {
     private void save() throws IOException {
         JsonObject root = new JsonObject();
         choices.forEach(root::addProperty);
-        Files.createDirectories(file.getParent());
+        LauncherPaths.ensureDirectory(file.getParent());
         Files.writeString(file, root.toString(), StandardCharsets.UTF_8);
     }
 }

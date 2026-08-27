@@ -1,5 +1,6 @@
 package dev.mcclient.launcher.fabric;
 
+import dev.mcclient.launcher.LauncherPaths;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -128,7 +129,7 @@ public final class FabricProfile {
     }
 
     private void extractNatives(Path jarPath, Path nativesDir) throws IOException {
-        Files.createDirectories(nativesDir);
+        LauncherPaths.ensureDirectory(nativesDir);
         try (var zip = new java.util.zip.ZipFile(jarPath.toFile())) {
             var entries = zip.entries();
             while (entries.hasMoreElements()) {
@@ -162,7 +163,7 @@ public final class FabricProfile {
         if (Files.exists(dest) && (expectedSha1 == null || sha1Of(dest).equalsIgnoreCase(expectedSha1))) {
             return;
         }
-        Files.createDirectories(dest.getParent());
+        LauncherPaths.ensureDirectory(dest.getParent());
 
         HttpRequest request = HttpRequest.newBuilder(URI.create(url)).GET().build();
         HttpResponse<byte[]> response = http.send(request, HttpResponse.BodyHandlers.ofByteArray());
