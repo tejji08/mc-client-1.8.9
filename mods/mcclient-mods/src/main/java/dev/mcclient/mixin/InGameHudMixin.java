@@ -30,5 +30,8 @@ public class InGameHudMixin {
         if (McClientMods.BEDWARS.isEnabled()) {
             McClientMods.BEDWARS.render(client);
         }
+        if (McClientMods.MATCH_STATS.isEnabled()) {
+            McClientMods.MATCH_STATS.render(client);
+        }
     }
 }

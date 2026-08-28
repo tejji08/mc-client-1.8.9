@@ -9,14 +9,8 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.util.Window;
-import net.minecraft.scoreboard.Scoreboard;
-import net.minecraft.scoreboard.ScoreboardObjective;
-import net.minecraft.scoreboard.ScoreboardPlayerScore;
-import net.minecraft.scoreboard.Team;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -28,8 +22,6 @@ import java.util.List;
  */
 public final class BedwarsModule extends Module {
 
-    private static final int SIDEBAR_SLOT = 1;
-    private static final int MAX_SIDEBAR_ROWS = 15;
     private static final int PANEL_BG = 0x90000000;
     private static final int ROW_HEIGHT = 11;
 
@@ -46,7 +38,7 @@ public final class BedwarsModule extends Module {
         if (client.world == null) {
             return;
         }
-        List<TeamState> teams = readTeams(client);
+        List<TeamState> teams = SidebarSource.teams(client);
         if (teams.isEmpty()) {
             return;
         }
@@ -131,43 +123,4 @@ public final class BedwarsModule extends Module {
         return 0xFFFFFFFF;
     }
 
-    /**
-     * Pulls the sidebar the same way vanilla renders it: highest score at the top, team
-     * prefix/suffix applied, capped at the 15 rows the sidebar can actually show.
-     */
-    private List<TeamState> readTeams(MinecraftClient client) {
-        Scoreboard scoreboard = client.world.getScoreboard();
-        if (scoreboard == null) {
-            return Collections.emptyList();
-        }
-        ScoreboardObjective objective = scoreboard.getObjectiveForSlot(SIDEBAR_SLOT);
-        if (objective == null || !ScoreboardReader.isBedwars(objective.getDisplayName())) {
-            return Collections.emptyList();
-        }
-
-        List<ScoreboardPlayerScore> scores =
-                new ArrayList<ScoreboardPlayerScore>(scoreboard.getAllPlayerScores(objective));
-        // Vanilla hides entries whose "player name" starts with '#'.
-        for (int i = scores.size() - 1; i >= 0; i--) {
-            String name = scores.get(i).getPlayerName();
-            if (name == null || name.startsWith("#")) {
-                scores.remove(i);
-            }
-        }
-        Collections.sort(scores, new Comparator<ScoreboardPlayerScore>() {
-            @Override
-            public int compare(ScoreboardPlayerScore a, ScoreboardPlayerScore b) {
-                return b.getScore() - a.getScore();
-            }
-        });
-
-        List<String> lines = new ArrayList<String>();
-        int limit = Math.min(scores.size(), MAX_SIDEBAR_ROWS);
-        for (int i = 0; i < limit; i++) {
-            String name = scores.get(i).getPlayerName();
-            Team team = scoreboard.getPlayerTeam(name);
-            lines.add(Team.decorateName(team, name));
-        }
-        return ScoreboardReader.readTeams(lines);
-    }
 }

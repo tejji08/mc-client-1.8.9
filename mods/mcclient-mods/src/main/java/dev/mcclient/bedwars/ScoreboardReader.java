@@ -1,7 +1,9 @@
 package dev.mcclient.bedwars;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -81,6 +83,38 @@ public final class ScoreboardReader {
             }
         }
         return new TeamState(letter, name, status, playersLeft, self);
+    }
+
+    /** e.g. "Final Kills: 2" -- a label and a plain number. */
+    private static final Pattern STAT_LINE = Pattern.compile("^\\s*([A-Za-z][A-Za-z ]*?)\\s*:\\s*(\\d+)\\s*$");
+
+    /**
+     * Your own stats for the current match, straight off the sidebar: kills, final kills, beds
+     * broken -- whatever Hypixel chose to put there, keyed by its own label.
+     *
+     * <p>No API key and no network call: these numbers are already on screen, sent by the server,
+     * and authoritative. Team rows are skipped, since "G Green: 2" is a survivor count, not a stat.
+     */
+    public static Map<String, Integer> readStats(List<String> lines) {
+        Map<String, Integer> stats = new LinkedHashMap<String, Integer>();
+        if (lines == null) {
+            return stats;
+        }
+        for (int i = 0; i < lines.size(); i++) {
+            String line = strip(lines.get(i)).trim();
+            if (line.isEmpty() || parseTeamLine(line) != null) {
+                continue;
+            }
+            Matcher matcher = STAT_LINE.matcher(line);
+            if (matcher.matches()) {
+                try {
+                    stats.put(matcher.group(1).trim(), Integer.valueOf(Integer.parseInt(matcher.group(2))));
+                } catch (NumberFormatException e) {
+                    // A number too large to be a Bed Wars stat is not one we care about.
+                }
+            }
+        }
+        return stats;
     }
 
     /** Parses every team row out of a full sidebar, preserving the order they appear in. */

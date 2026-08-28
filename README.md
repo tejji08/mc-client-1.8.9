@@ -22,11 +22,14 @@ The client's own features live in one jar (`mods/mcclient-mods`) rather than sev
 
 - **Keystrokes** — WASD + mouse display with a rolling CPS counter.
 - **Bed Wars HUD** — condenses the Hypixel Bed Wars sidebar into one colour-coded row per team.
+- **Match Stats** — your kills, final kills, beds broken, deaths and K/D for the game you're in. Fully local: the first three come off the sidebar the server already sent, deaths from chat the client already displayed. **No Hypixel API key, no network call.**
 - **Fullbright** — pushes `gamma` past vanilla's slider limit. Lights caves; reveals nothing through walls.
 
 **Press Right Shift in-game** to open the settings menu: modules on the left, the selected module's settings on the right, everything else the launcher installed listed read-only. Settings persist to `config/mcclient.properties`. Built from vanilla `ButtonWidget`s -- 1.8.9 has no slider or checkbox widget, so each setting is a button that cycles, the same trick the vanilla Options screen uses.
 
 All of it stays on the right side of Hypixel's rules: these reformat information the client already has. No ESP or radar, no x-ray, no auto-clicker, no macros, no aim assist.
+
+Deaths are the one match stat the sidebar doesn't carry, so they're inferred from chat by shape rather than by an exact list of Hypixel's death strings -- there are dozens, they change, and a missed variant would silently under-count. The rule that actually separates a death from chatter: the line opens with your name and your name isn't followed by a colon.
 
 The Bed Wars scoreboard parser is deliberately free of Minecraft types so it can be unit-tested against real sidebar text (`./gradlew :mods:mcclient-mods:test`) — the only other place to exercise it is a live Hypixel game.
 
