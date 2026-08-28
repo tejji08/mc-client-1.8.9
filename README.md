@@ -26,9 +26,14 @@ The client's own features live in one jar (`mods/mcclient-mods`) rather than sev
 - **Generator Timers** — diamond/emerald spawn countdowns, read off the generators' own holograms rather than modelled from spawn intervals (a model drifts the moment a generator is upgraded; the hologram is the server's own answer).
 - **Potion HUD** — active effects with time remaining, soonest-to-expire first. Vanilla 1.8.9 only shows these in the inventory screen, which is exactly where you can't look mid-fight.
 - **TNT Timers** — fuse countdown for nearby TNT. **Off by default, deliberately:** the fuse is on an entity the client already has and already renders, but unlike everything else here it is *not clearly on Hypixel's allowed-mods list*. Check their current rules before enabling it there.
+- **Zoom** — hold-to-zoom (default `C`), the way OptiFine trained everyone to expect. The same view, narrower.
 - **Fullbright** — pushes `gamma` past vanilla's slider limit. Lights caves; reveals nothing through walls.
 
-**Press Right Shift in-game** to open the settings menu: modules on the left, the selected module's settings on the right, everything else the launcher installed listed read-only. Settings persist to `config/mcclient.properties`. Built from vanilla `ButtonWidget`s -- 1.8.9 has no slider or checkbox widget, so each setting is a button that cycles, the same trick the vanilla Options screen uses.
+**Right Shift** opens the settings menu: modules on the left, the selected module's settings on the right, everything else the launcher installed listed read-only. **Right Control** opens the HUD editor -- drag any panel where you want it. Both keys are rebindable, and every module can be bound to its own toggle key. Settings persist to `config/mcclient.properties`.
+
+Built from vanilla `ButtonWidget`s -- 1.8.9 has no slider or checkbox widget, so each setting is a button that cycles, the same trick the vanilla Options screen uses. Keybinds are the exception: cycling a hundred key codes a click at a time would be useless, so they capture the next key you press (Escape clears a binding).
+
+HUD positions are stored as a **fraction of the screen**, so a panel stays where you put it when the window is resized or the GUI scale changes -- pixels would drift. Panels with nothing live to show (the Bed Wars ones outside a game) render sample values in the editor, otherwise there would be nothing on screen to grab.
 
 Everything except TNT Timers reformats information the client already has, and stays on the right side of Hypixel's rules. No ESP or radar, no x-ray, no auto-clicker, no macros, no aim assist. TNT Timers is the one judgement call, and it ships disabled.
 

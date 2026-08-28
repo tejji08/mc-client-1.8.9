@@ -1,10 +1,7 @@
 package dev.mcclient.hud;
 
 import dev.mcclient.core.BooleanSetting;
-import dev.mcclient.core.ChoiceSetting;
-import dev.mcclient.core.Corner;
-import dev.mcclient.core.Module;
-import dev.mcclient.core.OptionSetting;
+import dev.mcclient.core.HudModule;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffectInstance;
@@ -21,33 +18,28 @@ import java.util.List;
  * <p>Vanilla 1.8.9 only shows this inside the inventory screen, which is exactly where you cannot
  * look mid-fight. The data is the player's own effect list -- nothing about anyone else.
  */
-public final class PotionHudModule extends Module {
+public final class PotionHudModule extends HudModule {
 
     private static final int NORMAL = 0xFFFFFFFF;
     private static final int EXPIRING = 0xFFFF5555;
     private static final int EXPIRING_TICKS = 5 * 20;
 
-    private final OptionSetting corner;
-    private final ChoiceSetting scale;
     private final BooleanSetting hideAmbient;
 
     public PotionHudModule() {
-        super("potion-hud", "Potion HUD", "Active effects with time remaining.", true);
-        corner = add(new OptionSetting("corner", "Position", Corner.NAMES, 1));
-        scale = add(new ChoiceSetting("scale", "Scale", new float[] {0.75f, 1.0f, 1.25f, 1.5f}, 1.0f, "x"));
+        super("potion-hud", "Potion HUD", "Active effects with time remaining.", true, 0.80f, 0.34f);
         hideAmbient = add(new BooleanSetting("hideBeacon", "Hide beacon effects", false));
     }
 
-    public void render(MinecraftClient client) {
-        if (client.player == null) {
-            return;
-        }
-        Collection<StatusEffectInstance> effects = client.player.getStatusEffectInstances();
-        if (effects == null || effects.isEmpty()) {
-            return;
-        }
+    @Override
+    public void draw(MinecraftClient client, boolean preview) {
+        Collection<StatusEffectInstance> effects =
+                client.player == null ? null : client.player.getStatusEffectInstances();
 
-        List<StatusEffectInstance> sorted = new ArrayList<StatusEffectInstance>(effects);
+        List<StatusEffectInstance> sorted = new ArrayList<StatusEffectInstance>();
+        if (effects != null) {
+            sorted.addAll(effects);
+        }
         if (hideAmbient.get()) {
             for (int i = sorted.size() - 1; i >= 0; i--) {
                 if (sorted.get(i).isAmbient()) {
@@ -56,8 +48,12 @@ public final class PotionHudModule extends Module {
             }
         }
         if (sorted.isEmpty()) {
+            if (preview) {
+                drawSample(client);
+            }
             return;
         }
+
         Collections.sort(sorted, new Comparator<StatusEffectInstance>() {
             @Override
             public int compare(StatusEffectInstance a, StatusEffectInstance b) {
@@ -72,10 +68,22 @@ public final class PotionHudModule extends Module {
             StatusEffectInstance effect = sorted.get(i);
             String numeral = Format.amplifier(effect.getAmplifier());
             String name = name(effect.getEffectId());
-            rows.add((numeral.isEmpty() ? name : name + " " + numeral) + "  " + Format.ticksToTime(effect.getDuration()));
+            rows.add((numeral.isEmpty() ? name : name + " " + numeral)
+                    + "  " + Format.ticksToTime(effect.getDuration()));
             colours.add(Integer.valueOf(effect.getDuration() <= EXPIRING_TICKS ? EXPIRING : NORMAL));
         }
-        Panel.draw(client, corner.index(), scale.get(), rows, colours);
+        Panel.draw(client, this, rows, colours);
+    }
+
+    /** With no effects active there is nothing to drag, so the editor gets a sample panel. */
+    private void drawSample(MinecraftClient client) {
+        List<String> rows = new ArrayList<String>();
+        List<Integer> colours = new ArrayList<Integer>();
+        rows.add("Speed II  1:30");
+        colours.add(Integer.valueOf(NORMAL));
+        rows.add("Invisibility  0:04");
+        colours.add(Integer.valueOf(EXPIRING));
+        Panel.draw(client, this, rows, colours);
     }
 
     /** Vanilla's own name for the effect, derived from its translation key so no lang file is needed. */

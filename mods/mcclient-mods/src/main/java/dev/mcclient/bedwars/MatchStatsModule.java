@@ -2,14 +2,11 @@ package dev.mcclient.bedwars;
 
 import com.mojang.blaze3d.platform.GlStateManager;
 import dev.mcclient.core.BooleanSetting;
-import dev.mcclient.core.ChoiceSetting;
-import dev.mcclient.core.Corner;
-import dev.mcclient.core.Module;
-import dev.mcclient.core.OptionSetting;
+import dev.mcclient.core.HudModule;
+import dev.mcclient.hud.Panel;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawableHelper;
-import net.minecraft.client.util.Window;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,15 +20,13 @@ import java.util.Map;
  * leaves the machine -- which is the whole reason this is a different feature from a stats overlay
  * that looks up other players' careers.
  */
-public final class MatchStatsModule extends Module {
+public final class MatchStatsModule extends HudModule {
 
-    private static final int PANEL_BG = 0x90000000;
-    private static final int ROW_HEIGHT = 11;
+    private static final int ROW_HEIGHT = Panel.ROW_HEIGHT;
     private static final int LABEL = 0xFFAAAAAA;
     private static final int VALUE = 0xFFFFFFFF;
+    private static final int GAP = 8;
 
-    private final OptionSetting corner;
-    private final ChoiceSetting scale;
     private final BooleanSetting showKd;
 
     private int deaths;
@@ -39,9 +34,8 @@ public final class MatchStatsModule extends Module {
     private int lastSidebarTotal = -1;
 
     public MatchStatsModule() {
-        super("match-stats", "Match Stats", "Your kills, finals, beds and deaths this game.", true);
-        corner = add(new OptionSetting("corner", "Position", Corner.NAMES, 0));
-        scale = add(new ChoiceSetting("scale", "Scale", new float[] {0.75f, 1.0f, 1.25f, 1.5f}, 1.0f, "x"));
+        super("match-stats", "Match Stats", "Your kills, finals, beds and deaths this game.", true,
+                0.02f, 0.30f);
         showKd = add(new BooleanSetting("showKd", "Show K/D", true));
     }
 
@@ -56,22 +50,56 @@ public final class MatchStatsModule extends Module {
         }
     }
 
-    public void render(MinecraftClient client) {
-        if (client.world == null) {
-            return;
-        }
-        Map<String, Integer> stats = SidebarSource.stats(client);
-        if (stats.isEmpty()) {
-            return;
-        }
-
-        int kills = value(stats, "Kills");
-        int finals = value(stats, "Final Kills");
-        int beds = value(stats, "Beds Broken");
-        trackMatchReset(kills + finals + beds);
+    @Override
+    public void draw(MinecraftClient client, boolean preview) {
+        Map<String, Integer> stats = client.world == null ? null : SidebarSource.stats(client);
 
         List<String> labels = new ArrayList<String>();
         List<String> values = new ArrayList<String>();
+        if (stats == null || stats.isEmpty()) {
+            if (!preview) {
+                return;
+            }
+            // Outside a Bed Wars game there is nothing to show, so the editor gets sample rows.
+            fill(labels, values, 5, 2, 1, 1, 0);
+        } else {
+            int kills = value(stats, "Kills");
+            int finals = value(stats, "Final Kills");
+            int beds = value(stats, "Beds Broken");
+            trackMatchReset(kills + finals + beds);
+            fill(labels, values, kills, finals, beds, deaths, finalDeaths);
+        }
+
+        TextRenderer font = client.textRenderer;
+        int labelWidth = 0;
+        int valueWidth = 0;
+        for (int i = 0; i < labels.size(); i++) {
+            labelWidth = Math.max(labelWidth, font.getStringWidth(labels.get(i)));
+            valueWidth = Math.max(valueWidth, font.getStringWidth(values.get(i)));
+        }
+        int width = labelWidth + GAP + valueWidth;
+        int height = labels.size() * ROW_HEIGHT;
+
+        float scale = scale();
+        int[] xy = Panel.place(client, position(), width, height, scale);
+
+        GlStateManager.pushMatrix();
+        GlStateManager.enableBlend();
+        GlStateManager.disableLighting();
+        GlStateManager.scale(scale, scale, 1.0f);
+
+        DrawableHelper.fill(xy[0] - 4, xy[1] - 4, xy[0] + width + 4, xy[1] + height + 2, Panel.BG);
+        for (int i = 0; i < labels.size(); i++) {
+            int rowY = xy[1] + i * ROW_HEIGHT;
+            font.draw(labels.get(i), xy[0], rowY, LABEL);
+            font.draw(values.get(i), xy[0] + width - font.getStringWidth(values.get(i)), rowY, VALUE);
+        }
+
+        GlStateManager.popMatrix();
+    }
+
+    private void fill(List<String> labels, List<String> values,
+                      int kills, int finals, int beds, int deathCount, int finalDeathCount) {
         labels.add("Kills");
         values.add(String.valueOf(kills));
         labels.add("Finals");
@@ -79,43 +107,11 @@ public final class MatchStatsModule extends Module {
         labels.add("Beds");
         values.add(String.valueOf(beds));
         labels.add("Deaths");
-        values.add(finalDeaths > 0 ? deaths + " (" + finalDeaths + "F)" : String.valueOf(deaths));
+        values.add(finalDeathCount > 0 ? deathCount + " (" + finalDeathCount + "F)" : String.valueOf(deathCount));
         if (showKd.get()) {
             labels.add("K/D");
-            values.add(ratio(kills, deaths));
+            values.add(ratio(kills, deathCount));
         }
-
-        TextRenderer font = client.textRenderer;
-        float s = scale.get();
-        Window window = new Window(client);
-
-        int labelWidth = 0;
-        int valueWidth = 0;
-        for (int i = 0; i < labels.size(); i++) {
-            labelWidth = Math.max(labelWidth, font.getStringWidth(labels.get(i)));
-            valueWidth = Math.max(valueWidth, font.getStringWidth(values.get(i)));
-        }
-        int width = labelWidth + 8 + valueWidth;
-        int height = labels.size() * ROW_HEIGHT;
-
-        int screenWidth = (int) (window.getScaledWidth() / s);
-        int screenHeight = (int) (window.getScaledHeight() / s);
-        int x = Corner.x(corner.index(), screenWidth, width, 10);
-        int y = Corner.y(corner.index(), screenHeight, height, 10);
-
-        GlStateManager.pushMatrix();
-        GlStateManager.enableBlend();
-        GlStateManager.disableLighting();
-        GlStateManager.scale(s, s, 1.0f);
-
-        DrawableHelper.fill(x - 4, y - 4, x + width + 4, y + height + 2, PANEL_BG);
-        for (int i = 0; i < labels.size(); i++) {
-            int rowY = y + i * ROW_HEIGHT;
-            font.draw(labels.get(i), x, rowY, LABEL);
-            font.draw(values.get(i), x + width - font.getStringWidth(values.get(i)), rowY, VALUE);
-        }
-
-        GlStateManager.popMatrix();
     }
 
     /**

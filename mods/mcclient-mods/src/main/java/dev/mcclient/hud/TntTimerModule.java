@@ -1,9 +1,6 @@
 package dev.mcclient.hud;
 
-import dev.mcclient.core.ChoiceSetting;
-import dev.mcclient.core.Corner;
-import dev.mcclient.core.Module;
-import dev.mcclient.core.OptionSetting;
+import dev.mcclient.core.HudModule;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.TntEntity;
@@ -22,7 +19,7 @@ import java.util.List;
  * list</strong>. Off by default for that reason: enabling it on Hypixel is a decision for whoever
  * is playing, and worth checking against their current rules first.
  */
-public final class TntTimerModule extends Module {
+public final class TntTimerModule extends HudModule {
 
     private static final double MAX_RANGE_SQ = 40.0 * 40.0;
     private static final int MAX_ROWS = 5;
@@ -30,34 +27,18 @@ public final class TntTimerModule extends Module {
     private static final int URGENT = 0xFFFF5555;
     private static final int URGENT_TICKS = 20;
 
-    private final OptionSetting corner;
-    private final ChoiceSetting scale;
-
     public TntTimerModule() {
-        super("tnt-timers", "TNT Timers", "Fuse countdown for nearby TNT. Off by default -- see README.", false);
-        corner = add(new OptionSetting("corner", "Position", Corner.NAMES, 3));
-        scale = add(new ChoiceSetting("scale", "Scale", new float[] {0.75f, 1.0f, 1.25f, 1.5f}, 1.0f, "x"));
+        super("tnt-timers", "TNT Timers", "Fuse countdown for nearby TNT. Off by default -- see README.",
+                false, 0.55f, 0.62f);
     }
 
-    public void render(MinecraftClient client) {
-        if (client.world == null || client.player == null) {
-            return;
-        }
-        List<Entity> entities = client.world.loadedEntities;
-        if (entities == null) {
-            return;
-        }
-        // Copy first: the entity list is mutated on the client thread while we read it.
-        List<Entity> snapshot = new ArrayList<Entity>(entities);
-
-        List<TntEntity> nearby = new ArrayList<TntEntity>();
-        for (int i = 0; i < snapshot.size(); i++) {
-            Entity entity = snapshot.get(i);
-            if (entity instanceof TntEntity && client.player.squaredDistanceTo(entity) <= MAX_RANGE_SQ) {
-                nearby.add((TntEntity) entity);
-            }
-        }
+    @Override
+    public void draw(MinecraftClient client, boolean preview) {
+        List<TntEntity> nearby = collect(client);
         if (nearby.isEmpty()) {
+            if (preview) {
+                drawSample(client);
+            }
             return;
         }
         Collections.sort(nearby, new Comparator<TntEntity>() {
@@ -76,6 +57,31 @@ public final class TntTimerModule extends Module {
             rows.add("TNT  " + Format.fuse(tnt.fuseTimer) + "  " + blocks + "m");
             colours.add(Integer.valueOf(tnt.fuseTimer <= URGENT_TICKS ? URGENT : NORMAL));
         }
-        Panel.draw(client, corner.index(), scale.get(), rows, colours);
+        Panel.draw(client, this, rows, colours);
+    }
+
+    private List<TntEntity> collect(MinecraftClient client) {
+        List<TntEntity> nearby = new ArrayList<TntEntity>();
+        if (client.world == null || client.player == null || client.world.loadedEntities == null) {
+            return nearby;
+        }
+        // Copy first: the entity list is mutated on the client thread while we read it.
+        List<Entity> snapshot = new ArrayList<Entity>(client.world.loadedEntities);
+        for (int i = 0; i < snapshot.size(); i++) {
+            Entity entity = snapshot.get(i);
+            if (entity instanceof TntEntity && client.player.squaredDistanceTo(entity) <= MAX_RANGE_SQ) {
+                nearby.add((TntEntity) entity);
+            }
+        }
+        return nearby;
+    }
+
+    /** No live TNT means nothing to drag, so the editor shows a sample row. */
+    private void drawSample(MinecraftClient client) {
+        List<String> rows = new ArrayList<String>();
+        List<Integer> colours = new ArrayList<Integer>();
+        rows.add("TNT  2.4s  6m");
+        colours.add(Integer.valueOf(NORMAL));
+        Panel.draw(client, this, rows, colours);
     }
 }

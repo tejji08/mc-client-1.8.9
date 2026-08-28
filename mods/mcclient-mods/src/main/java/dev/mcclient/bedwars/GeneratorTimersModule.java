@@ -1,9 +1,6 @@
 package dev.mcclient.bedwars;
 
-import dev.mcclient.core.ChoiceSetting;
-import dev.mcclient.core.Corner;
-import dev.mcclient.core.Module;
-import dev.mcclient.core.OptionSetting;
+import dev.mcclient.core.HudModule;
 import dev.mcclient.hud.Panel;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
@@ -18,11 +15,11 @@ import java.util.List;
  * Countdown to the next diamond and emerald spawn, pulled from the generators' own holograms.
  *
  * <p>Hypixel already draws "Spawns in 12 seconds" above each generator; this collects the nearest
- * ones into a corner so you don't have to be looking at the generator to know. Nothing is
- * predicted or modelled -- a modelled interval would drift the moment a generator is upgraded, so
- * the server's own hologram stays the source of truth.
+ * ones into one panel so you know without looking at the generator. Nothing is predicted: a
+ * modelled interval would drift the moment a generator is upgraded, so the server's own hologram
+ * stays the source of truth.
  */
-public final class GeneratorTimersModule extends Module {
+public final class GeneratorTimersModule extends HudModule {
 
     /** Hypixel stacks a generator's hologram over a few armour stands within a block of each other. */
     private static final double CLUSTER_RADIUS_SQ = 4.0;
@@ -34,21 +31,21 @@ public final class GeneratorTimersModule extends Module {
     private static final int OTHER = 0xFFFFFFFF;
     private static final int URGENT = 0xFFFF5555;
 
-    private final OptionSetting corner;
-    private final ChoiceSetting scale;
-
     public GeneratorTimersModule() {
-        super("gen-timers", "Generator Timers", "Diamond and emerald spawn countdowns.", true);
-        corner = add(new OptionSetting("corner", "Position", Corner.NAMES, 3));
-        scale = add(new ChoiceSetting("scale", "Scale", new float[] {0.75f, 1.0f, 1.25f, 1.5f}, 1.0f, "x"));
+        super("gen-timers", "Generator Timers", "Diamond and emerald spawn countdowns.", true,
+                0.80f, 0.62f);
     }
 
-    public void render(MinecraftClient client) {
-        if (client.world == null || client.player == null) {
-            return;
-        }
-        List<Cluster> clusters = collectClusters(client);
+    @Override
+    public void draw(MinecraftClient client, boolean preview) {
+        List<Cluster> clusters = (client.world == null || client.player == null)
+                ? new ArrayList<Cluster>()
+                : collectClusters(client);
+
         if (clusters.isEmpty()) {
+            if (preview) {
+                drawSample(client);
+            }
             return;
         }
 
@@ -68,7 +65,18 @@ public final class GeneratorTimersModule extends Module {
             rows.add(cluster.spawn.label() + "  " + cluster.spawn.seconds() + "s");
             colours.add(Integer.valueOf(colourFor(cluster.spawn)));
         }
-        Panel.draw(client, corner.index(), scale.get(), rows, colours);
+        Panel.draw(client, this, rows, colours);
+    }
+
+    /** No generators outside a Bed Wars map, so the editor needs something to drag. */
+    private void drawSample(MinecraftClient client) {
+        List<String> rows = new ArrayList<String>();
+        List<Integer> colours = new ArrayList<Integer>();
+        rows.add("Diamond II  12s");
+        colours.add(Integer.valueOf(DIAMOND));
+        rows.add("Emerald  3s");
+        colours.add(Integer.valueOf(URGENT));
+        Panel.draw(client, this, rows, colours);
     }
 
     private int colourFor(GeneratorReader.Spawn spawn) {
@@ -82,9 +90,9 @@ public final class GeneratorTimersModule extends Module {
     }
 
     /**
-     * Groups nearby named armour stands into one hologram each, then parses the joined text.
-     * The tier, the resource name and the countdown are separate stands, so they only make sense
-     * read together.
+     * Groups nearby named armour stands into one hologram each, then parses the joined text. The
+     * tier, the resource name and the countdown are separate stands, so they only make sense read
+     * together.
      */
     private List<Cluster> collectClusters(MinecraftClient client) {
         List<Cluster> clusters = new ArrayList<Cluster>();

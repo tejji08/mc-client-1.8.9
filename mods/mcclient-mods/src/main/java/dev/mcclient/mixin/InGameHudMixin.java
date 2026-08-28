@@ -23,24 +23,6 @@ public class InGameHudMixin {
             return;
         }
         McClientMods.ensureReady();
-
-        if (McClientMods.KEYSTROKES.isEnabled()) {
-            McClientMods.KEYSTROKES.render(client);
-        }
-        if (McClientMods.BEDWARS.isEnabled()) {
-            McClientMods.BEDWARS.render(client);
-        }
-        if (McClientMods.MATCH_STATS.isEnabled()) {
-            McClientMods.MATCH_STATS.render(client);
-        }
-        if (McClientMods.GEN_TIMERS.isEnabled()) {
-            McClientMods.GEN_TIMERS.render(client);
-        }
-        if (McClientMods.POTIONS.isEnabled()) {
-            McClientMods.POTIONS.render(client);
-        }
-        if (McClientMods.TNT.isEnabled()) {
-            McClientMods.TNT.render(client);
-        }
+        McClientMods.drawHuds(client, false);
     }
 }

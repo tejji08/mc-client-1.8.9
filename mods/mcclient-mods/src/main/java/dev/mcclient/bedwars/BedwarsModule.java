@@ -1,14 +1,8 @@
 package dev.mcclient.bedwars;
 
-import com.mojang.blaze3d.platform.GlStateManager;
-import dev.mcclient.core.ChoiceSetting;
-import dev.mcclient.core.Corner;
-import dev.mcclient.core.Module;
-import dev.mcclient.core.OptionSetting;
+import dev.mcclient.core.HudModule;
+import dev.mcclient.hud.Panel;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawableHelper;
-import net.minecraft.client.util.Window;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,58 +14,40 @@ import java.util.List;
  * mid-fight. This condenses it to one row per team. Everything shown is a reformatting of the
  * scoreboard the server already sent and the client already draws.
  */
-public final class BedwarsModule extends Module {
-
-    private static final int PANEL_BG = 0x90000000;
-    private static final int ROW_HEIGHT = 11;
-
-    private final OptionSetting corner;
-    private final ChoiceSetting scale;
+public final class BedwarsModule extends HudModule {
 
     public BedwarsModule() {
-        super("bedwars-hud", "Bed Wars HUD", "Condensed per-team bed status on Hypixel.", true);
-        corner = add(new OptionSetting("corner", "Position", Corner.NAMES, 1));
-        scale = add(new ChoiceSetting("scale", "Scale", new float[] {0.75f, 1.0f, 1.25f, 1.5f}, 1.0f, "x"));
+        super("bedwars-hud", "Bed Wars HUD", "Condensed per-team bed status on Hypixel.", true,
+                0.80f, 0.10f);
     }
 
-    public void render(MinecraftClient client) {
-        if (client.world == null) {
-            return;
-        }
-        List<TeamState> teams = SidebarSource.teams(client);
+    @Override
+    public void draw(MinecraftClient client, boolean preview) {
+        List<TeamState> teams = client.world == null ? new ArrayList<TeamState>() : SidebarSource.teams(client);
         if (teams.isEmpty()) {
-            return;
+            if (!preview) {
+                return;
+            }
+            // Nothing to show outside a Bed Wars game, so the editor needs something to drag.
+            teams = sample();
         }
 
-        TextRenderer font = client.textRenderer;
-        float s = scale.get();
-        Window window = new Window(client);
-
-        int width = 0;
         List<String> rows = new ArrayList<String>(teams.size());
+        List<Integer> colours = new ArrayList<Integer>(teams.size());
         for (int i = 0; i < teams.size(); i++) {
-            String row = format(teams.get(i));
-            rows.add(row);
-            width = Math.max(width, font.getStringWidth(row));
+            rows.add(format(teams.get(i)));
+            colours.add(Integer.valueOf(colourFor(teams.get(i))));
         }
-        int height = rows.size() * ROW_HEIGHT;
+        Panel.draw(client, this, rows, colours);
+    }
 
-        int screenWidth = (int) (window.getScaledWidth() / s);
-        int screenHeight = (int) (window.getScaledHeight() / s);
-        int x = Corner.x(corner.index(), screenWidth, width, 10);
-        int y = Corner.y(corner.index(), screenHeight, height, 10);
-
-        GlStateManager.pushMatrix();
-        GlStateManager.enableBlend();
-        GlStateManager.disableLighting();
-        GlStateManager.scale(s, s, 1.0f);
-
-        DrawableHelper.fill(x - 4, y - 4, x + width + 4, y + height + 2, PANEL_BG);
-        for (int i = 0; i < rows.size(); i++) {
-            font.draw(rows.get(i), x, y + i * ROW_HEIGHT, colourFor(teams.get(i)));
-        }
-
-        GlStateManager.popMatrix();
+    private static List<TeamState> sample() {
+        List<TeamState> teams = new ArrayList<TeamState>();
+        teams.add(new TeamState("R", "Red", BedStatus.ALIVE, -1, false));
+        teams.add(new TeamState("B", "Blue", BedStatus.ALIVE, -1, true));
+        teams.add(new TeamState("G", "Green", BedStatus.BROKEN, 2, false));
+        teams.add(new TeamState("Y", "Yellow", BedStatus.ELIMINATED, -1, false));
+        return teams;
     }
 
     /** "R Red  BED" / "G Green  x2" / "Y Yellow  OUT", with a marker on your own team. */

@@ -18,12 +18,15 @@ public abstract class Module {
     private final String description;
     private final List<Setting> settings = new ArrayList<Setting>();
     private final BooleanSetting enabled;
+    private final KeybindSetting toggleKey;
 
     protected Module(String id, String name, String description, boolean enabledByDefault) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.enabled = new BooleanSetting("enabled", "Enabled", enabledByDefault);
+        // Every module gets a toggle key. Added last so it sits at the bottom of the settings list.
+        this.toggleKey = new KeybindSetting("toggleKey", "Toggle key", KeybindSetting.NONE);
     }
 
     public String id() {
@@ -54,9 +57,20 @@ public abstract class Module {
         return enabled;
     }
 
-    /** Settings other than the enable toggle, in menu order. */
+    public KeybindSetting toggleKey() {
+        return toggleKey;
+    }
+
+    /** False for the pseudo-module that only holds client-wide keybinds. */
+    public boolean canDisable() {
+        return true;
+    }
+
+    /** Settings other than the enable toggle, in menu order, with the toggle key last. */
     public List<Setting> settings() {
-        return Collections.unmodifiableList(settings);
+        List<Setting> all = new ArrayList<Setting>(settings);
+        all.add(toggleKey);
+        return Collections.unmodifiableList(all);
     }
 
     protected <T extends Setting> T add(T setting) {

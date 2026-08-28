@@ -2,16 +2,13 @@ package dev.mcclient.keystrokes;
 
 import com.mojang.blaze3d.platform.GlStateManager;
 import dev.mcclient.core.BooleanSetting;
-import dev.mcclient.core.ChoiceSetting;
-import dev.mcclient.core.Corner;
-import dev.mcclient.core.Module;
-import dev.mcclient.core.OptionSetting;
+import dev.mcclient.core.HudModule;
+import dev.mcclient.hud.Panel;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.Window;
 
 /**
  * WASD and mouse key display with a rolling CPS counter.
@@ -20,7 +17,7 @@ import net.minecraft.client.util.Window;
  * counter is fed key states rather than hooking input, so it is structurally incapable of
  * generating a click.
  */
-public final class KeystrokesModule extends Module {
+public final class KeystrokesModule extends HudModule {
 
     private static final int KEY = 22;
     private static final int GAP = 2;
@@ -29,8 +26,6 @@ public final class KeystrokesModule extends Module {
     private static final int FG_IDLE = 0xFFFFFFFF;
     private static final int FG_HELD = 0xFF000000;
 
-    private final OptionSetting corner;
-    private final ChoiceSetting scale;
     private final BooleanSetting showCps;
     private final BooleanSetting showSpacebar;
 
@@ -38,36 +33,37 @@ public final class KeystrokesModule extends Module {
     private final ClickCounter rightClicks = new ClickCounter();
 
     public KeystrokesModule() {
-        super("keystrokes", "Keystrokes", "WASD and mouse keys with a CPS counter.", true);
-        corner = add(new OptionSetting("corner", "Position", Corner.NAMES, 2));
-        scale = add(new ChoiceSetting("scale", "Scale", new float[] {0.75f, 1.0f, 1.25f, 1.5f}, 1.0f, "x"));
+        super("keystrokes", "Keystrokes", "WASD and mouse keys with a CPS counter.", true,
+                0.02f, 0.62f);
         showCps = add(new BooleanSetting("showCps", "Show CPS", true));
         showSpacebar = add(new BooleanSetting("showSpacebar", "Show spacebar", true));
     }
 
-    public void render(MinecraftClient client) {
+    @Override
+    public void draw(MinecraftClient client, boolean preview) {
         GameOptions options = client.options;
+        if (options == null) {
+            return;
+        }
         long now = System.currentTimeMillis();
         leftClicks.update(options.attackKey.isPressed(), now);
         rightClicks.update(options.useKey.isPressed(), now);
 
         TextRenderer font = client.textRenderer;
-        float s = scale.get();
-        Window window = new Window(client);
+        float scale = scale();
 
         int panelWidth = (KEY + GAP) * 3 - GAP;
         int rows = showSpacebar.get() ? 4 : 3;
         int panelHeight = (KEY + GAP) * rows - GAP;
 
-        int screenWidth = (int) (window.getScaledWidth() / s);
-        int screenHeight = (int) (window.getScaledHeight() / s);
-        int x = Corner.x(corner.index(), screenWidth, panelWidth, 6);
-        int y = Corner.y(corner.index(), screenHeight, panelHeight, 6);
+        int[] xy = Panel.place(client, position(), panelWidth, panelHeight, scale);
+        int x = xy[0];
+        int y = xy[1];
 
         GlStateManager.pushMatrix();
         GlStateManager.enableBlend();
         GlStateManager.disableLighting();
-        GlStateManager.scale(s, s, 1.0f);
+        GlStateManager.scale(scale, scale, 1.0f);
 
         key(font, x + KEY + GAP, y, "W", options.forwardKey);
 
