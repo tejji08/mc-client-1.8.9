@@ -1,6 +1,10 @@
 package dev.mcclient.bedwars;
 
 import com.mojang.blaze3d.platform.GlStateManager;
+import dev.mcclient.core.ChoiceSetting;
+import dev.mcclient.core.Corner;
+import dev.mcclient.core.Module;
+import dev.mcclient.core.OptionSetting;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawableHelper;
@@ -18,43 +22,37 @@ import java.util.List;
 /**
  * Compact bed/team readout for Bed Wars.
  *
- * <p>The vanilla sidebar already carries this information, but spread over a tall column that is
- * slow to read mid-fight. This condenses it to one short row per team, colour-coded, so a glance
- * answers "whose bed is still up and how many of them are left".
- *
- * <p>Everything shown is a reformatting of the scoreboard the server already sent and the client
- * already draws. Nothing is requested, inferred about hidden players, or sent anywhere.
+ * <p>The vanilla sidebar already carries this, but spread over a tall column that is slow to read
+ * mid-fight. This condenses it to one row per team. Everything shown is a reformatting of the
+ * scoreboard the server already sent and the client already draws.
  */
-public final class BedwarsHud {
+public final class BedwarsModule extends Module {
 
-    /** Sidebar display slot. */
     private static final int SIDEBAR_SLOT = 1;
-
     private static final int MAX_SIDEBAR_ROWS = 15;
     private static final int PANEL_BG = 0x90000000;
     private static final int ROW_HEIGHT = 11;
 
-    private final BedwarsConfig config;
+    private final OptionSetting corner;
+    private final ChoiceSetting scale;
 
-    public BedwarsHud(BedwarsConfig config) {
-        this.config = config;
+    public BedwarsModule() {
+        super("bedwars-hud", "Bed Wars HUD", "Condensed per-team bed status on Hypixel.", true);
+        corner = add(new OptionSetting("corner", "Position", Corner.NAMES, 1));
+        scale = add(new ChoiceSetting("scale", "Scale", new float[] {0.75f, 1.0f, 1.25f, 1.5f}, 1.0f, "x"));
     }
 
-    public void render() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client == null || client.player == null || client.world == null || client.options == null) {
+    public void render(MinecraftClient client) {
+        if (client.world == null) {
             return;
         }
-        if (client.options.hudHidden) {
-            return;
-        }
-
         List<TeamState> teams = readTeams(client);
         if (teams.isEmpty()) {
             return;
         }
 
         TextRenderer font = client.textRenderer;
+        float s = scale.get();
         Window window = new Window(client);
 
         int width = 0;
@@ -64,17 +62,19 @@ public final class BedwarsHud {
             rows.add(row);
             width = Math.max(width, font.getStringWidth(row));
         }
+        int height = rows.size() * ROW_HEIGHT;
 
-        // Anchor to the right edge by default so it doesn't fight the vanilla sidebar.
-        int x = config.x >= 0 ? config.x : (int) (window.getScaledWidth() / config.scale) - width - 8;
-        int y = config.y;
+        int screenWidth = (int) (window.getScaledWidth() / s);
+        int screenHeight = (int) (window.getScaledHeight() / s);
+        int x = Corner.x(corner.index(), screenWidth, width, 10);
+        int y = Corner.y(corner.index(), screenHeight, height, 10);
 
         GlStateManager.pushMatrix();
         GlStateManager.enableBlend();
         GlStateManager.disableLighting();
-        GlStateManager.scale(config.scale, config.scale, 1.0f);
+        GlStateManager.scale(s, s, 1.0f);
 
-        DrawableHelper.fill(x - 4, y - 4, x + width + 4, y + rows.size() * ROW_HEIGHT + 2, PANEL_BG);
+        DrawableHelper.fill(x - 4, y - 4, x + width + 4, y + height + 2, PANEL_BG);
         for (int i = 0; i < rows.size(); i++) {
             font.draw(rows.get(i), x, y + i * ROW_HEIGHT, colourFor(teams.get(i)));
         }
@@ -82,7 +82,7 @@ public final class BedwarsHud {
         GlStateManager.popMatrix();
     }
 
-    /** "R Red  BED" / "G Green  x2" / "Y Yellow  OUT", plus a marker on your own team. */
+    /** "R Red  BED" / "G Green  x2" / "Y Yellow  OUT", with a marker on your own team. */
     private String format(TeamState team) {
         String status;
         switch (team.status()) {
@@ -132,8 +132,8 @@ public final class BedwarsHud {
     }
 
     /**
-     * Pulls the sidebar out of the scoreboard the same way vanilla renders it: highest score at the
-     * top, team prefix/suffix applied, capped at the 15 rows the sidebar can actually show.
+     * Pulls the sidebar the same way vanilla renders it: highest score at the top, team
+     * prefix/suffix applied, capped at the 15 rows the sidebar can actually show.
      */
     private List<TeamState> readTeams(MinecraftClient client) {
         Scoreboard scoreboard = client.world.getScoreboard();
@@ -145,8 +145,8 @@ public final class BedwarsHud {
             return Collections.emptyList();
         }
 
-        List<ScoreboardPlayerScore> scores = new ArrayList<ScoreboardPlayerScore>(
-                scoreboard.getAllPlayerScores(objective));
+        List<ScoreboardPlayerScore> scores =
+                new ArrayList<ScoreboardPlayerScore>(scoreboard.getAllPlayerScores(objective));
         // Vanilla hides entries whose "player name" starts with '#'.
         for (int i = scores.size() - 1; i >= 0; i--) {
             String name = scores.get(i).getPlayerName();

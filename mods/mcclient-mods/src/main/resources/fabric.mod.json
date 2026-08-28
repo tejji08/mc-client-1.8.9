@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "mcclient-mods",
+  "version": "1.0.0",
+  "name": "mc-client Modules",
+  "description": "The client's own modules -- keystrokes, Bed Wars HUD, fullbright -- with an in-game settings menu on Right Shift.",
+  "environment": "client",
+  "entrypoints": {
+    "main": [ "dev.mcclient.McClientMods" ]
+  },
+  "mixins": [ "mcclient-mods.mixins.json" ],
+  "depends": {
+    "fabricloader": ">=0.18.0",
+    "minecraft": "1.8.9"
+  }
+}

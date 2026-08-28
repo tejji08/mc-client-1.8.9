@@ -1,8 +1,8 @@
 {
   "required": true,
-  "package": "dev.mcclient.bedwars.mixin",
+  "package": "dev.mcclient.mixin",
   "compatibilityLevel": "JAVA_8",
   "minVersion": "0.8",
-  "client": [ "InGameHudMixin" ],
+  "client": [ "InGameHudMixin", "MinecraftClientMixin" ],
   "injectors": { "defaultRequire": 1 }
 }

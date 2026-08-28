@@ -58,6 +58,34 @@
       "license": "LGPL-3.0-only",
       "required": false,
       "enabledByDefault": false
+    },
+    {
+      "id": "phosphor-legacy",
+      "name": "Phosphor-Legacy",
+      "version": "0.1.5",
+      "description": "Rewrites the lighting engine. The single biggest frame-time win available on 1.8.9.",
+      "category": "performance",
+      "url": "https://cdn.modrinth.com/data/fLCmgUPa/versions/UdBfSdpd/phosphor-legacy-0.1.5%2B1.8.9.jar",
+      "sha256": "7f66585588c8bc7145b94de3b4396fed3e04119169084e1ab46b07e4064e128c",
+      "sizeBytes": 70221,
+      "sourceUrl": "https://github.com/Grayray75/phosphor-legacy",
+      "license": "LGPL-3.0-only",
+      "required": false,
+      "enabledByDefault": true
+    },
+    {
+      "id": "enhanced-packet-compression",
+      "name": "Enhanced Packet Compression",
+      "version": "0.0.2-Beta",
+      "description": "Cheaper packet compression, which helps most on busy servers like Hypixel.",
+      "category": "performance",
+      "url": "https://cdn.modrinth.com/data/7rMK10yr/versions/fm36LRKO/EnhancedPacketCompression-0.0.2-Beta.jar",
+      "sha256": "9fa80fbd605dff0f568f3d58ccaee49d0979135f81d71899742fe366964bda95",
+      "sizeBytes": 11714,
+      "sourceUrl": "https://github.com/Blobanium/EnhancedPacketCompression",
+      "license": "MIT",
+      "required": false,
+      "enabledByDefault": false
     }
   ]
 }

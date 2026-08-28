@@ -1,8 +1,0 @@
-{
-  "required": true,
-  "package": "dev.mcclient.keystrokes.mixin",
-  "compatibilityLevel": "JAVA_8",
-  "minVersion": "0.8",
-  "client": [ "InGameHudMixin" ],
-  "injectors": { "defaultRequire": 1 }
-}

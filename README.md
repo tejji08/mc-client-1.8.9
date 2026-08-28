@@ -18,12 +18,22 @@ Locally built jars from `mods/` cannot be pinned (they change every build), so t
 Since 2022 every new Azure app must be manually allowlisted before `api.minecraftservices.com` will accept it — until then the final auth leg returns HTTP 403 `Invalid app registration`, no matter how correct the config is. Submit the app at <https://aka.ms/mce-reviewappid>. `./gradlew :launcher:checkApproval` probes the current state headlessly (exit 0 approved / 1 failed / 2 pending) using the cached refresh token, with no interactive prompt.
 
 ### The mods
-Two real client mods ship in-tree, both built with Legacy Fabric's Loom toolchain and both Hypixel-legal (they reformat information the client already has; neither automates input nor reveals anything hidden):
+The client's own features live in one jar (`mods/mcclient-mods`) rather than several. A settings registry split across jars would mean several copies of the static state, so the menu could only see its own -- which is why real clients ship one artefact with modules inside.
 
-- **`mods/keystrokes`** — WASD + mouse display with a rolling CPS counter. Config: `config/keystrokes.properties`.
-- **`mods/bedwars-hud`** — condenses the Hypixel Bed Wars sidebar into one colour-coded row per team (bed up / players left / eliminated). Config: `config/bedwars-hud.properties`.
+- **Keystrokes** — WASD + mouse display with a rolling CPS counter.
+- **Bed Wars HUD** — condenses the Hypixel Bed Wars sidebar into one colour-coded row per team.
+- **Fullbright** — pushes `gamma` past vanilla's slider limit. Lights caves; reveals nothing through walls.
 
-The Bed Wars scoreboard parser is deliberately free of Minecraft types so it can be unit-tested against real sidebar text (`./gradlew :mods:bedwars-hud:test`) — the only other place to exercise it is a live Hypixel game.
+**Press Right Shift in-game** to open the settings menu: modules on the left, the selected module's settings on the right, everything else the launcher installed listed read-only. Settings persist to `config/mcclient.properties`. Built from vanilla `ButtonWidget`s -- 1.8.9 has no slider or checkbox widget, so each setting is a button that cycles, the same trick the vanilla Options screen uses.
+
+All of it stays on the right side of Hypixel's rules: these reformat information the client already has. No ESP or radar, no x-ray, no auto-clicker, no macros, no aim assist.
+
+The Bed Wars scoreboard parser is deliberately free of Minecraft types so it can be unit-tested against real sidebar text (`./gradlew :mods:mcclient-mods:test`) — the only other place to exercise it is a live Hypixel game.
+
+### Performance
+The manifest pins **Phosphor-Legacy** (lighting engine rewrite — the biggest frame-time win on 1.8.9) and **Ksyxis** (skips the chunk pre-load on world join), with **Enhanced Packet Compression** available but off by default. Writing a Sodium-class renderer from scratch is months of work; curating vetted, hash-pinned mods is what the manifest exists for.
+
+Radium (a Lithium port) was tried and **rejected**: it hard-depends on `legacy-lwjgl3`, which conflicts with the patched LWJGL 2 this launcher ships, and it prevented the game from starting.
 
 ### Modding
 Each subproject under `mods/` is a normal Fabric mod (`fabric.mod.json` + a `ModInitializer`), compiled against `net.fabricmc:fabric-loader`. `./gradlew :launcher:run` auto-copies every built `mods/*/build/libs/*.jar` into the game's `mods/` folder before each launch — build a mod, run the launcher, it's loaded. See `mods/example-mod` for the minimal shape.

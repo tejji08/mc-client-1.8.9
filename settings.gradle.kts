@@ -11,5 +11,4 @@ rootProject.name = "mc-client-1.8.9"
 
 include("launcher")
 include("mods:example-mod")
-include("mods:keystrokes")
-include("mods:bedwars-hud")
+include("mods:mcclient-mods")

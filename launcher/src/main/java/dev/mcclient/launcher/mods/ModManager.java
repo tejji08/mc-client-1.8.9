@@ -1,5 +1,8 @@
 package dev.mcclient.launcher.mods;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import dev.mcclient.launcher.LauncherPaths;
 import dev.mcclient.launcher.Progress;
 
@@ -10,6 +13,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -157,20 +161,26 @@ public final class ModManager {
             }
         }
 
-        // Drop stale managed jars (disabled, removed from the manifest, or newly failing verification).
-        Set<String> managed = new HashSet<>();
+        // Drop stale jars (disabled, removed from the manifest, or newly failing verification).
+        //
+        // What we may delete is driven by a record of what we previously copied, not by the current
+        // manifest: a mod dropped from the manifest is exactly the case the manifest can no longer
+        // tell us about, and it would otherwise linger in the game folder forever. Anything absent
+        // from that record is the user's own file and is left alone.
+        Set<String> previouslySynced = readSyncRecord();
         for (ModEntry entry : manifest.mods()) {
-            managed.add(entry.fileName());
+            previouslySynced.add(entry.fileName());
         }
         try (var existing = Files.list(gameModsDir)) {
             for (Path path : (Iterable<Path>) existing::iterator) {
                 String fileName = path.getFileName().toString();
-                boolean isOurs = managed.contains(fileName) || fileName.startsWith(DEV_PREFIX);
+                boolean isOurs = previouslySynced.contains(fileName) || fileName.startsWith(DEV_PREFIX);
                 if (isOurs && !wanted.contains(fileName)) {
                     Files.deleteIfExists(path);
                 }
             }
         }
+        writeSyncRecord(wanted);
 
         int copied = 0;
         for (InstalledMod mod : resolved) {
@@ -185,6 +195,39 @@ public final class ModManager {
         }
         progress.status("Mods ready: " + copied + " loaded");
         return resolved;
+    }
+
+    /** Filenames the launcher last copied into the game folder, so it knows what it may remove. */
+    private Set<String> readSyncRecord() {
+        Path record = LauncherPaths.root().resolve("synced-mods.json");
+        Set<String> names = new HashSet<>();
+        if (!Files.exists(record)) {
+            return names;
+        }
+        try {
+            JsonArray array = JsonParser.parseString(Files.readString(record, StandardCharsets.UTF_8))
+                    .getAsJsonArray();
+            for (JsonElement element : array) {
+                names.add(element.getAsString());
+            }
+        } catch (IOException | RuntimeException e) {
+            // A damaged record just means we fall back to only touching manifest-known files.
+        }
+        return names;
+    }
+
+    private void writeSyncRecord(Set<String> names) {
+        Path record = LauncherPaths.root().resolve("synced-mods.json");
+        JsonArray array = new JsonArray();
+        for (String name : names) {
+            array.add(name);
+        }
+        try {
+            LauncherPaths.ensureDirectory(record.getParent());
+            Files.writeString(record, array.toString(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            // Losing the record only costs us cleanup precision next run; not worth failing a launch.
+        }
     }
 
     /**
