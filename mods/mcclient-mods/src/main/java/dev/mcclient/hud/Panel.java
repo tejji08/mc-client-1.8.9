@@ -8,20 +8,31 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.util.Window;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Draws a positioned list of coloured rows, and records where it landed so the HUD editor can
- * hit-test and drag it. Shared so every HUD module looks identical and moves the same way.
+ * Draws a positioned list of rows, and records where it landed so the HUD editor can hit-test and
+ * drag it. Shared so every HUD module looks identical, restyles identically, and moves identically.
  */
 public final class Panel {
 
-    public static final int BG = 0x90000000;
     public static final int ROW_HEIGHT = 11;
     private static final int PAD = 4;
 
     private Panel() {}
 
+    /** Rows in the module's own configured colour. */
+    public static void draw(MinecraftClient client, HudModule module, List<String> rows) {
+        List<Integer> colours = new ArrayList<Integer>(rows.size());
+        Integer colour = Integer.valueOf(module.textColour());
+        for (int i = 0; i < rows.size(); i++) {
+            colours.add(colour);
+        }
+        draw(client, module, rows, colours);
+    }
+
+    /** Rows whose colours carry meaning of their own -- a team's red, an expiring effect. */
     public static void draw(MinecraftClient client, HudModule module,
                             List<String> rows, List<Integer> colours) {
         if (rows.isEmpty()) {
@@ -42,9 +53,18 @@ public final class Panel {
         GlStateManager.disableLighting();
         GlStateManager.scale(scale, scale, 1.0f);
 
-        DrawableHelper.fill(xy[0] - PAD, xy[1] - PAD, xy[0] + width + PAD, xy[1] + height + 2, BG);
+        if (module.hasBackground()) {
+            DrawableHelper.fill(xy[0] - PAD, xy[1] - PAD, xy[0] + width + PAD, xy[1] + height + 2,
+                    module.backgroundColour());
+        }
         for (int i = 0; i < rows.size(); i++) {
-            font.draw(rows.get(i), xy[0], xy[1] + i * ROW_HEIGHT, colours.get(i).intValue());
+            int y = xy[1] + i * ROW_HEIGHT;
+            int colour = colours.get(i).intValue();
+            if (module.hasShadow()) {
+                font.drawWithShadow(rows.get(i), xy[0], y, colour);
+            } else {
+                font.draw(rows.get(i), xy[0], y, colour);
+            }
         }
 
         GlStateManager.popMatrix();

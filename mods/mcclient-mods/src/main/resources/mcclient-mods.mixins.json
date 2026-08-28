@@ -3,6 +3,13 @@
   "package": "dev.mcclient.mixin",
   "compatibilityLevel": "JAVA_8",
   "minVersion": "0.8",
-  "client": [ "InGameHudMixin", "MinecraftClientMixin", "ChatHudMixin" ],
-  "injectors": { "defaultRequire": 1 }
+  "client": [
+    "InGameHudMixin",
+    "MinecraftClientMixin",
+    "ChatHudMixin",
+    "FpsAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
 }

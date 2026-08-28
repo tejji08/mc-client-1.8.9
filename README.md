@@ -18,20 +18,16 @@ Locally built jars from `mods/` cannot be pinned (they change every build), so t
 Since 2022 every new Azure app must be manually allowlisted before `api.minecraftservices.com` will accept it — until then the final auth leg returns HTTP 403 `Invalid app registration`, no matter how correct the config is. Submit the app at <https://aka.ms/mce-reviewappid>. `./gradlew :launcher:checkApproval` probes the current state headlessly (exit 0 approved / 1 failed / 2 pending) using the cached refresh token, with no interactive prompt.
 
 ### The mods
-The client's own features live in one jar (`mods/mcclient-mods`) rather than several. A settings registry split across jars would mean several copies of the static state, so the menu could only see its own -- which is why real clients ship one artefact with modules inside.
+The client's own features live in one jar (`mods/mcclient-mods`) as **16 modules**. A settings registry split across jars would mean several copies of the static state, so the menu could only see its own -- which is why real clients ship one artefact with modules inside.
 
-- **Keystrokes** — WASD + mouse display with a rolling CPS counter.
-- **Bed Wars HUD** — condenses the Hypixel Bed Wars sidebar into one colour-coded row per team.
-- **Match Stats** — your kills, final kills, beds broken, deaths and K/D for the game you're in. Fully local: the first three come off the sidebar the server already sent, deaths from chat the client already displayed. **No Hypixel API key, no network call.**
-- **Generator Timers** — diamond/emerald spawn countdowns, read off the generators' own holograms rather than modelled from spawn intervals (a model drifts the moment a generator is upgraded; the hologram is the server's own answer).
-- **Potion HUD** — active effects with time remaining, soonest-to-expire first. Vanilla 1.8.9 only shows these in the inventory screen, which is exactly where you can't look mid-fight.
-- **TNT Timers** — fuse countdown for nearby TNT. **Off by default, deliberately:** the fuse is on an entity the client already has and already renders, but unlike everything else here it is *not clearly on Hypixel's allowed-mods list*. Check their current rules before enabling it there.
-- **Zoom** — hold-to-zoom (default `C`), the way OptiFine trained everyone to expect. The same view, narrower.
-- **Fullbright** — pushes `gamma` past vanilla's slider limit. Lights caves; reveals nothing through walls.
+**HUD panels:** Keystrokes, Bed Wars HUD, Match Stats, Generator Timers, Potion HUD, TNT Timers, Resource Monitor (FPS/memory/ping), Speed, Armor Tracker, Weapon Tracker, Arrow Tracker, Blocks Tracker, Coordinates.
+**Non-HUD:** Zoom (hold to narrow FOV), Fullbright (brightness past the slider limit), Client (holds the menu and editor keys).
 
-**Right Shift** opens the settings menu: modules on the left, the selected module's settings on the right, everything else the launcher installed listed read-only. **Right Control** opens the HUD editor -- drag any panel where you want it. Both keys are rebindable, and every module can be bound to its own toggle key. Settings persist to `config/mcclient.properties`.
+Every HUD panel carries the same six controls -- **position, size, text colour, background on/off, background opacity, text shadow** -- because they live on the shared `HudModule` base rather than being re-declared per module. Size is a continuous slider from 0.5x to 3x; zoom amount and fullbright brightness are sliders too.
 
-Built from vanilla `ButtonWidget`s -- 1.8.9 has no slider or checkbox widget, so each setting is a button that cycles, the same trick the vanilla Options screen uses. Keybinds are the exception: cycling a hundred key codes a click at a time would be useless, so they capture the next key you press (Escape clears a binding).
+**Right Shift** opens the settings menu, **Right Control** the HUD editor; both keys are rebindable and every module can be bound to its own toggle key. Both menu columns scroll -- sixteen modules with eight settings each stopped fitting on one screen. **Reload config** re-reads the file from disk, which also picks up hand edits to `config/mcclient.properties`.
+
+Numeric settings get a real slider. Keybinds are the exception: cycling a hundred key codes a click at a time would be useless, so they capture the next key you press (Escape clears).
 
 HUD positions are stored as a **fraction of the screen**, so a panel stays where you put it when the window is resized or the GUI scale changes -- pixels would drift. Panels with nothing live to show (the Bed Wars ones outside a game) render sample values in the editor, otherwise there would be nothing on screen to grab.
 
@@ -39,7 +35,7 @@ Everything except TNT Timers reformats information the client already has, and s
 
 Deaths are the one match stat the sidebar doesn't carry, so they're inferred from chat by shape rather than by an exact list of Hypixel's death strings -- there are dozens, they change, and a missed variant would silently under-count. The rule that actually separates a death from chatter: the line opens with your name and your name isn't followed by a colon.
 
-The Bed Wars scoreboard parser is deliberately free of Minecraft types so it can be unit-tested against real sidebar text (`./gradlew :mods:mcclient-mods:test`) — the only other place to exercise it is a live Hypixel game.
+The Bed Wars scoreboard parser is deliberately free of Minecraft types so it can be unit-tested against real sidebar text (`./gradlew test`) -- the only other place to exercise it is a live Hypixel game.
 
 ### Performance
 The manifest pins **Phosphor-Legacy** (lighting engine rewrite — the biggest frame-time win on 1.8.9) and **Ksyxis** (skips the chunk pre-load on world join), with **Enhanced Packet Compression** available but off by default. Writing a Sodium-class renderer from scratch is months of work; curating vetted, hash-pinned mods is what the manifest exists for.

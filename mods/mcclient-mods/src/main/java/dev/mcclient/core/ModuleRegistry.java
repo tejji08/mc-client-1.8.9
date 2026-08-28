@@ -39,6 +39,16 @@ public final class ModuleRegistry {
         return null;
     }
 
+    /**
+     * Re-reads the config file from disk, discarding unsaved in-memory state. Useful after editing
+     * the properties by hand, or to undo a session of fiddling without restarting the game.
+     */
+    public static void reload() {
+        if (configFile != null) {
+            applyFrom(configFile);
+        }
+    }
+
     /** Points the registry at the game directory and restores saved values. */
     public static void load(File gameDir) {
         configFile = new File(new File(gameDir, "config"), "mcclient.properties");
@@ -46,10 +56,17 @@ public final class ModuleRegistry {
             save();
             return;
         }
+        applyFrom(configFile);
+    }
+
+    private static void applyFrom(File file) {
+        if (!file.isFile()) {
+            return;
+        }
         Properties props = new Properties();
         FileInputStream in = null;
         try {
-            in = new FileInputStream(configFile);
+            in = new FileInputStream(file);
             props.load(in);
         } catch (IOException e) {
             System.out.println("[mcclient] could not read config, using defaults: " + e.getMessage());

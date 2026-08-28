@@ -1,9 +1,10 @@
 package dev.mcclient.menu;
 
-import dev.mcclient.core.HudModule;
+import dev.mcclient.core.ClientModule;
 import dev.mcclient.core.KeybindSetting;
 import dev.mcclient.core.Module;
 import dev.mcclient.core.ModuleRegistry;
+import dev.mcclient.core.NumberSetting;
 import dev.mcclient.core.PositionSetting;
 import dev.mcclient.core.Setting;
 import net.fabricmc.loader.api.FabricLoader;
@@ -20,23 +21,38 @@ import java.util.List;
 /**
  * The settings menu: modules on the left, the selected module's settings on the right.
  *
- * <p>Built from plain {@link ButtonWidget}s so it looks and behaves like a vanilla screen. 1.8.9
- * has no slider or checkbox widget, which is why most settings are buttons that cycle -- the same
- * trick the vanilla Options screen uses. Keybinds are the exception: cycling a hundred key codes a
- * click at a time would be useless, so they capture the next key you press instead.
+ * <p>Built from plain widgets so it looks and behaves like a vanilla screen. Numeric settings get a
+ * real slider, since "a bit bigger" is a reasonable thing to ask of a HUD and a handful of preset
+ * steps cannot answer it. Keybinds capture the next key pressed rather than cycling, because
+ * stepping through a hundred key codes a click at a time would be useless.
+ *
+ * <p>Both columns scroll: sixteen modules, several with eight settings each, stopped fitting on one
+ * screen a while ago.
  */
 public final class ModMenuScreen extends Screen {
 
     private static final int ID_DONE = 900;
     private static final int ID_TOGGLE = 800;
     private static final int ID_EDIT_HUD = 801;
+    private static final int ID_RELOAD = 802;
+    private static final int ID_SCROLL_UP = 803;
+    private static final int ID_SCROLL_DOWN = 804;
+    private static final int ID_SET_UP = 805;
+    private static final int ID_SET_DOWN = 806;
     private static final int ID_SETTING_BASE = 200;
+
+    private static final int ROW = 22;
+    private static final int TOP = 46;
+    private static final int VISIBLE_ROWS = 9;
 
     /** Mods we did not write, so the list of "everything installed" is honest about what it can edit. */
     private static final List<String> IGNORED_IDS =
             Arrays.asList("minecraft", "java", "fabricloader", "mcclient-mods");
 
-    private int selected;
+    private static int selected;
+    private static int moduleScroll;
+    private static int settingScroll;
+
     private KeybindSetting capturing;
     private List<String> otherMods = Collections.emptyList();
 
@@ -46,34 +62,76 @@ public final class ModMenuScreen extends Screen {
         otherMods = collectOtherMods();
 
         List<Module> modules = ModuleRegistry.modules();
-        int leftX = this.width / 2 - 170;
-        int rightX = this.width / 2 + 10;
-        int top = 46;
+        clampScroll(modules.size());
 
-        for (int i = 0; i < modules.size(); i++) {
-            this.buttons.add(new ButtonWidget(i, leftX, top + i * 22, 160, 20, label(modules.get(i), i)));
+        int leftX = this.width / 2 - 176;
+        int rightX = this.width / 2 + 12;
+
+        int shown = Math.min(VISIBLE_ROWS, modules.size() - moduleScroll);
+        for (int i = 0; i < shown; i++) {
+            int index = moduleScroll + i;
+            this.buttons.add(new ButtonWidget(index, leftX, TOP + i * ROW, 160, 20,
+                    label(modules.get(index), index)));
+        }
+        if (modules.size() > VISIBLE_ROWS) {
+            this.buttons.add(new ButtonWidget(ID_SCROLL_UP, leftX - 22, TOP, 20, 20, "^"));
+            this.buttons.add(new ButtonWidget(ID_SCROLL_DOWN, leftX - 22, TOP + (shown - 1) * ROW, 20, 20, "v"));
         }
 
         if (selected >= 0 && selected < modules.size()) {
             Module module = modules.get(selected);
-            int row = 0;
-            if (module.canDisable()) {
-                this.buttons.add(new ButtonWidget(ID_TOGGLE, rightX, top, 160, 20,
-                        module.isEnabled() ? "Enabled: ON" : "Enabled: OFF"));
-                row++;
-            }
             List<Setting> settings = module.settings();
-            for (int j = 0; j < settings.size(); j++) {
+
+            // The enable toggle is a pseudo-row at the top of the same scrollable column, so a
+            // module with more settings than fit on screen still reaches every one of them.
+            int totalRows = settings.size() + (module.canDisable() ? 1 : 0);
+            int maxSettingScroll = Math.max(0, totalRows - VISIBLE_ROWS);
+            if (settingScroll > maxSettingScroll) {
+                settingScroll = maxSettingScroll;
+            }
+            if (settingScroll < 0) {
+                settingScroll = 0;
+            }
+
+            int drawn = 0;
+            for (int rowIndex = settingScroll; rowIndex < totalRows && drawn < VISIBLE_ROWS; rowIndex++, drawn++) {
+                int y = TOP + drawn * ROW;
+                if (module.canDisable() && rowIndex == 0) {
+                    this.buttons.add(new ButtonWidget(ID_TOGGLE, rightX, y, 168, 20,
+                            module.isEnabled() ? "Enabled: ON" : "Enabled: OFF"));
+                    continue;
+                }
+                int j = module.canDisable() ? rowIndex - 1 : rowIndex;
                 Setting setting = settings.get(j);
-                int id = setting instanceof PositionSetting ? ID_EDIT_HUD : ID_SETTING_BASE + j;
-                String text = setting instanceof PositionSetting
-                        ? "Position: edit HUD..."
-                        : setting.name() + ": " + setting.valueLabel();
-                this.buttons.add(new ButtonWidget(id, rightX, top + (row + j) * 22, 160, 20, text));
+                if (setting instanceof PositionSetting) {
+                    this.buttons.add(new ButtonWidget(ID_EDIT_HUD, rightX, y, 168, 20, "Position: edit HUD..."));
+                } else if (setting instanceof NumberSetting) {
+                    this.buttons.add(new SettingSlider(ID_SETTING_BASE + j, rightX, y, 168, 20,
+                            (NumberSetting) setting));
+                } else {
+                    this.buttons.add(new ButtonWidget(ID_SETTING_BASE + j, rightX, y, 168, 20,
+                            setting.name() + ": " + setting.valueLabel()));
+                }
+            }
+            if (totalRows > VISIBLE_ROWS) {
+                this.buttons.add(new ButtonWidget(ID_SET_UP, rightX + 172, TOP, 20, 20, "^"));
+                this.buttons.add(new ButtonWidget(ID_SET_DOWN, rightX + 172, TOP + (drawn - 1) * ROW, 20, 20, "v"));
             }
         }
 
-        this.buttons.add(new ButtonWidget(ID_DONE, this.width / 2 - 100, this.height - 28, 200, 20, "Done"));
+        this.buttons.add(new ButtonWidget(ID_RELOAD, this.width / 2 - 154, this.height - 28, 150, 20,
+                "Reload config"));
+        this.buttons.add(new ButtonWidget(ID_DONE, this.width / 2 + 4, this.height - 28, 150, 20, "Done"));
+    }
+
+    private void clampScroll(int count) {
+        int maxScroll = Math.max(0, count - VISIBLE_ROWS);
+        if (moduleScroll > maxScroll) {
+            moduleScroll = maxScroll;
+        }
+        if (moduleScroll < 0) {
+            moduleScroll = 0;
+        }
     }
 
     private String label(Module module, int index) {
@@ -87,6 +145,12 @@ public final class ModMenuScreen extends Screen {
             return;
         }
         List<Module> modules = ModuleRegistry.modules();
+
+        // A slider is adjusted by dragging, not by clicking through; only refresh its label.
+        if (button instanceof SettingSlider) {
+            ModuleRegistry.save();
+            return;
+        }
         cancelCapture();
 
         if (button.id == ID_DONE) {
@@ -94,12 +158,26 @@ public final class ModMenuScreen extends Screen {
             this.client.setScreen(null);
             return;
         }
+        if (button.id == ID_RELOAD) {
+            // Discards unsaved fiddling and re-reads the file, including hand edits.
+            ModuleRegistry.reload();
+            this.init();
+            return;
+        }
         if (button.id == ID_EDIT_HUD) {
             ModuleRegistry.save();
             this.client.setScreen(new HudEditorScreen());
             return;
         }
-        if (button.id == ID_TOGGLE && selected < modules.size()) {
+        if (button.id == ID_SCROLL_UP) {
+            moduleScroll--;
+        } else if (button.id == ID_SCROLL_DOWN) {
+            moduleScroll++;
+        } else if (button.id == ID_SET_UP) {
+            settingScroll--;
+        } else if (button.id == ID_SET_DOWN) {
+            settingScroll++;
+        } else if (button.id == ID_TOGGLE && selected < modules.size()) {
             Module module = modules.get(selected);
             if (module.canDisable()) {
                 module.setEnabled(!module.isEnabled());
@@ -117,6 +195,7 @@ public final class ModMenuScreen extends Screen {
             }
         } else if (button.id >= 0 && button.id < modules.size()) {
             selected = button.id;
+            settingScroll = 0;
         }
 
         ModuleRegistry.save();
@@ -131,18 +210,16 @@ public final class ModMenuScreen extends Screen {
 
         List<Module> modules = ModuleRegistry.modules();
         if (selected >= 0 && selected < modules.size()) {
-            this.textRenderer.draw(modules.get(selected).description(), this.width / 2 + 10, 32, 0xA0A0A0);
+            this.textRenderer.draw(modules.get(selected).description(), this.width / 2 + 12, 32, 0xA0A0A0);
         }
         if (capturing != null) {
             this.drawCenteredString(this.textRenderer,
                     "Press a key to bind, or Escape to clear", this.width / 2, this.height - 44, 0xFFD54F);
-        }
-
-        // Everything else the launcher installed. We can list it, but it is configured in the
-        // launcher (or by its own author), so it is shown read-only rather than faked as editable.
-        if (!otherMods.isEmpty()) {
+        } else if (!otherMods.isEmpty()) {
+            // Everything else the launcher installed. We can list it, but it is configured in the
+            // launcher (or by its own author), so it is shown read-only rather than faked as editable.
             this.textRenderer.draw("Also loaded: " + join(otherMods),
-                    this.width / 2 - 170, this.height - 52, 0x707070);
+                    this.width / 2 - 176, this.height - 44, 0x707070);
         }
 
         super.render(mouseX, mouseY, delta);
@@ -158,8 +235,10 @@ public final class ModMenuScreen extends Screen {
             this.init();
             return;
         }
-        Module client = ModuleRegistry.byId("client");
-        int menuKey = client == null ? 54 : ((dev.mcclient.core.ClientModule) client).menuKey().keyCode();
+        Module clientModule = ModuleRegistry.byId("client");
+        int menuKey = clientModule instanceof ClientModule
+                ? ((ClientModule) clientModule).menuKey().keyCode()
+                : KeybindSetting.NONE;
         if (keyCode == 1 || (menuKey != KeybindSetting.NONE && keyCode == menuKey)) {
             ModuleRegistry.save();
             this.client.setScreen(null);
@@ -208,10 +287,5 @@ public final class ModMenuScreen extends Screen {
             out.append(values.get(i));
         }
         return out.toString();
-    }
-
-    /** Unused hook kept so the compiler flags any future HudModule that forgets a position. */
-    static boolean isHud(Module module) {
-        return module instanceof HudModule;
     }
 }

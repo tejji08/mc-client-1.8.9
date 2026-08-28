@@ -9,6 +9,8 @@ import dev.mcclient.core.Module;
 import dev.mcclient.core.ModuleRegistry;
 import dev.mcclient.fullbright.FullbrightModule;
 import dev.mcclient.hud.PotionHudModule;
+import dev.mcclient.hud.ResourceMonitorModule;
+import dev.mcclient.hud.TrackerModules;
 import dev.mcclient.hud.TntTimerModule;
 import dev.mcclient.hud.ZoomModule;
 import dev.mcclient.keystrokes.KeystrokesModule;
@@ -30,6 +32,13 @@ public final class McClientMods implements ModInitializer {
     public static final GeneratorTimersModule GEN_TIMERS = new GeneratorTimersModule();
     public static final PotionHudModule POTIONS = new PotionHudModule();
     public static final TntTimerModule TNT = new TntTimerModule();
+    public static final ResourceMonitorModule RESOURCES = new ResourceMonitorModule();
+    public static final TrackerModules.Speed SPEED = new TrackerModules.Speed();
+    public static final TrackerModules.Armor ARMOR = new TrackerModules.Armor();
+    public static final TrackerModules.Weapon WEAPON = new TrackerModules.Weapon();
+    public static final TrackerModules.Arrows ARROWS = new TrackerModules.Arrows();
+    public static final TrackerModules.Blocks BLOCKS = new TrackerModules.Blocks();
+    public static final TrackerModules.Coordinates COORDS = new TrackerModules.Coordinates();
     public static final ZoomModule ZOOM = new ZoomModule();
     public static final FullbrightModule FULLBRIGHT = new FullbrightModule();
 
@@ -44,6 +53,13 @@ public final class McClientMods implements ModInitializer {
         ModuleRegistry.register(GEN_TIMERS);
         ModuleRegistry.register(POTIONS);
         ModuleRegistry.register(TNT);
+        ModuleRegistry.register(RESOURCES);
+        ModuleRegistry.register(SPEED);
+        ModuleRegistry.register(ARMOR);
+        ModuleRegistry.register(WEAPON);
+        ModuleRegistry.register(ARROWS);
+        ModuleRegistry.register(BLOCKS);
+        ModuleRegistry.register(COORDS);
         ModuleRegistry.register(ZOOM);
         ModuleRegistry.register(FULLBRIGHT);
         System.out.println("[mcclient] " + ModuleRegistry.modules().size() + " modules registered");

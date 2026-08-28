@@ -24,7 +24,6 @@ public final class MatchStatsModule extends HudModule {
 
     private static final int ROW_HEIGHT = Panel.ROW_HEIGHT;
     private static final int LABEL = 0xFFAAAAAA;
-    private static final int VALUE = 0xFFFFFFFF;
     private static final int GAP = 8;
 
     private final BooleanSetting showKd;
@@ -88,11 +87,20 @@ public final class MatchStatsModule extends HudModule {
         GlStateManager.disableLighting();
         GlStateManager.scale(scale, scale, 1.0f);
 
-        DrawableHelper.fill(xy[0] - 4, xy[1] - 4, xy[0] + width + 4, xy[1] + height + 2, Panel.BG);
+        if (hasBackground()) {
+            DrawableHelper.fill(xy[0] - 4, xy[1] - 4, xy[0] + width + 4, xy[1] + height + 2,
+                    backgroundColour());
+        }
         for (int i = 0; i < labels.size(); i++) {
             int rowY = xy[1] + i * ROW_HEIGHT;
-            font.draw(labels.get(i), xy[0], rowY, LABEL);
-            font.draw(values.get(i), xy[0] + width - font.getStringWidth(values.get(i)), rowY, VALUE);
+            int valueX = xy[0] + width - font.getStringWidth(values.get(i));
+            if (hasShadow()) {
+                font.drawWithShadow(labels.get(i), xy[0], rowY, LABEL);
+                font.drawWithShadow(values.get(i), valueX, rowY, textColour());
+            } else {
+                font.draw(labels.get(i), xy[0], rowY, LABEL);
+                font.draw(values.get(i), valueX, rowY, textColour());
+            }
         }
 
         GlStateManager.popMatrix();

@@ -1,6 +1,6 @@
 package dev.mcclient.hud;
 
-import dev.mcclient.core.ChoiceSetting;
+import dev.mcclient.core.NumberSetting;
 import dev.mcclient.core.KeybindSetting;
 import dev.mcclient.core.Module;
 import net.minecraft.client.MinecraftClient;
@@ -18,7 +18,7 @@ public final class ZoomModule extends Module {
     private static final int DEFAULT_KEY = 46;
 
     private final KeybindSetting zoomKey;
-    private final ChoiceSetting amount;
+    private final NumberSetting amount;
 
     private float originalFov;
     private boolean zooming;
@@ -26,7 +26,7 @@ public final class ZoomModule extends Module {
     public ZoomModule() {
         super("zoom", "Zoom", "Hold a key to narrow the field of view.", true);
         zoomKey = add(new KeybindSetting("zoomKey", "Zoom key", DEFAULT_KEY));
-        amount = add(new ChoiceSetting("amount", "Amount", new float[] {2.0f, 3.0f, 4.0f, 6.0f}, 4.0f, "x"));
+        amount = add(new NumberSetting("amount", "Zoom amount", 1.5f, 10.0f, 0.5f, 4.0f, "x", 1));
     }
 
     public void tick(MinecraftClient client) {
