@@ -49,14 +49,59 @@ public final class ModuleRegistry {
         }
     }
 
-    /** Points the registry at the game directory and restores saved values. */
+    /** Points the registry at the game directory and restores the active profile. */
     public static void load(File gameDir) {
-        configFile = new File(new File(gameDir, "config"), "mcclient.properties");
+        ProfileStore.init(gameDir);
+        configFile = ProfileStore.ready()
+                ? ProfileStore.activeFile()
+                : new File(new File(gameDir, "config"), "mcclient.properties");
         if (!configFile.isFile()) {
             save();
             return;
         }
         applyFrom(configFile);
+    }
+
+    /**
+     * Saves the current profile, then loads another. Settings absent from the incoming file keep
+     * whatever the outgoing profile left them at, so a partially written profile inherits rather
+     * than resetting to defaults -- which is the friendlier of the two surprises.
+     */
+    public static void switchProfile(String name) {
+        if (!ProfileStore.ready()) {
+            return;
+        }
+        save();
+        ProfileStore.setActive(name);
+        configFile = ProfileStore.activeFile();
+        if (configFile.isFile()) {
+            applyFrom(configFile);
+        } else {
+            // A brand new profile starts as a copy of what is on screen right now.
+            save();
+        }
+    }
+
+    /** Creates a profile from the current settings and switches to it. */
+    public static void createProfile(String name) {
+        if (!ProfileStore.ready()) {
+            return;
+        }
+        save();
+        ProfileStore.setActive(name);
+        configFile = ProfileStore.activeFile();
+        save();
+    }
+
+    public static void deleteProfile(String name) {
+        if (!ProfileStore.ready()) {
+            return;
+        }
+        String cleaned = ProfileStore.sanitise(name);
+        ProfileStore.delete(cleaned);
+        if (cleaned.equals(ProfileStore.active())) {
+            switchProfile(ProfileStore.DEFAULT_NAME);
+        }
     }
 
     private static void applyFrom(File file) {

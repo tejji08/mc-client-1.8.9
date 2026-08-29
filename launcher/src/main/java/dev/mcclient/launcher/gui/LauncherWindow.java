@@ -1,5 +1,7 @@
 package dev.mcclient.launcher.gui;
 
+import dev.mcclient.launcher.GameLog;
+import dev.mcclient.launcher.LauncherPaths;
 import dev.mcclient.launcher.LauncherSettings;
 import dev.mcclient.launcher.mods.ModManager;
 
@@ -32,6 +34,7 @@ public final class LauncherWindow extends JFrame {
     private final JPanel content = new JPanel(cards);
     private final Map<String, JLabel> navItems = new LinkedHashMap<>();
     private ModsPanel modsPanel;
+    private LogsPanel logsPanel;
 
     /** Builds and shows the window on the event dispatch thread. */
     public static void open() {
@@ -59,10 +62,14 @@ public final class LauncherWindow extends JFrame {
         LauncherSettings settings = new LauncherSettings();
 
         content.setBackground(Theme.BG);
+        GameLog log = new GameLog(LauncherPaths.root().resolve("logs").resolve("game-latest.log"), false);
         modsPanel = new ModsPanel(mods);
-        content.add(new PlayPanel(this, http, mods, settings), "Play");
+        logsPanel = new LogsPanel(log);
+        content.add(new PlayPanel(this, http, mods, settings, log), "Play");
         content.add(modsPanel, "Mods");
         content.add(new SettingsPanel(settings), "Settings");
+        content.add(logsPanel, "Logs");
+        content.add(new PrivacyPanel(), "Privacy");
 
         JPanel root = new JPanel(new BorderLayout());
         root.setBackground(Theme.BG);
@@ -90,7 +97,7 @@ public final class LauncherWindow extends JFrame {
         sidebar.add(version);
         sidebar.add(Box.createVerticalStrut(26));
 
-        for (String name : new String[] {"Play", "Mods", "Settings"}) {
+        for (String name : new String[] {"Play", "Mods", "Settings", "Logs", "Privacy"}) {
             JLabel item = navItem(name);
             navItems.put(name, item);
             sidebar.add(item);
@@ -125,6 +132,8 @@ public final class LauncherWindow extends JFrame {
         if (name.equals("Mods")) {
             // Re-verify on entry: "was fine last week" is not the claim the badge is making.
             modsPanel.refresh();
+        } else if (name.equals("Logs")) {
+            logsPanel.refresh();
         }
     }
 }

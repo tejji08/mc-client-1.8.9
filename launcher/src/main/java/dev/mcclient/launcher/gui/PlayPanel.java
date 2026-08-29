@@ -1,6 +1,7 @@
 package dev.mcclient.launcher.gui;
 
 import dev.mcclient.launcher.GameLauncher;
+import dev.mcclient.launcher.GameLog;
 import dev.mcclient.launcher.LauncherSettings;
 import dev.mcclient.launcher.Progress;
 import dev.mcclient.launcher.auth.SessionResolver;
@@ -32,17 +33,19 @@ final class PlayPanel extends JPanel {
     private final HttpClient http;
     private final ModManager mods;
     private final LauncherSettings settings;
+    private final GameLog gameLog;
 
     private final JButton play = Theme.button("PLAY", Theme.ACCENT, Theme.ACCENT_HOVER, Theme.TEXT, 20);
     private final JLabel status = Theme.label("Ready", 13, Font.PLAIN, Theme.TEXT_DIM);
     private final JProgressBar bar = new JProgressBar();
     private final JTextArea log = new JTextArea();
 
-    PlayPanel(JFrame owner, HttpClient http, ModManager mods, LauncherSettings settings) {
+    PlayPanel(JFrame owner, HttpClient http, ModManager mods, LauncherSettings settings, GameLog gameLog) {
         this.owner = owner;
         this.http = http;
         this.mods = mods;
         this.settings = settings;
+        this.gameLog = gameLog;
 
         setLayout(new BorderLayout());
         setBackground(Theme.BG);
@@ -145,7 +148,7 @@ final class PlayPanel extends JPanel {
             @Override
             protected Process doInBackground() throws Exception {
                 MinecraftSession session = new SessionResolver(http).resolve(progress, new SignInDialog(owner));
-                return new GameLauncher(http, mods).launch(session, settings, progress);
+                return new GameLauncher(http, mods, gameLog).launch(session, settings, progress);
             }
 
             @Override
@@ -157,8 +160,19 @@ final class PlayPanel extends JPanel {
                     play.setText("RUNNING");
                     // Re-arm the button when the game exits, so a crash doesn't strand the launcher.
                     game.onExit().thenRun(() -> SwingUtilities.invokeLater(() -> {
-                        append("Game exited with code " + game.exitValue() + ".");
-                        status.setText("Ready");
+                        int code = game.exitValue();
+                        append("Game exited with code " + code + ".");
+                        if (code != 0) {
+                            // A bare exit code tells you nothing; the last thing the game said does.
+                            status.setText("Game crashed (exit " + code + ") -- see the Logs tab");
+                            append("");
+                            append("--- last lines before exit ---");
+                            for (String line : gameLog.tail(15)) {
+                                append(line);
+                            }
+                        } else {
+                            status.setText("Ready");
+                        }
                         play.setText("PLAY");
                         play.setEnabled(true);
                         bar.setValue(0);

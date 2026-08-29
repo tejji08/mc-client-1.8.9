@@ -6,6 +6,7 @@ import dev.mcclient.core.Module;
 import dev.mcclient.core.ModuleRegistry;
 import dev.mcclient.core.NumberSetting;
 import dev.mcclient.core.PositionSetting;
+import dev.mcclient.core.ProfileStore;
 import dev.mcclient.core.Setting;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
@@ -39,6 +40,7 @@ public final class ModMenuScreen extends Screen {
     private static final int ID_SCROLL_DOWN = 804;
     private static final int ID_SET_UP = 805;
     private static final int ID_SET_DOWN = 806;
+    private static final int ID_PROFILES = 807;
     private static final int ID_SETTING_BASE = 200;
 
     private static final int ROW = 22;
@@ -119,9 +121,10 @@ public final class ModMenuScreen extends Screen {
             }
         }
 
-        this.buttons.add(new ButtonWidget(ID_RELOAD, this.width / 2 - 154, this.height - 28, 150, 20,
-                "Reload config"));
-        this.buttons.add(new ButtonWidget(ID_DONE, this.width / 2 + 4, this.height - 28, 150, 20, "Done"));
+        this.buttons.add(new ButtonWidget(ID_PROFILES, this.width / 2 - 176, this.height - 28, 110, 20,
+                "Profile: " + ProfileStore.active()));
+        this.buttons.add(new ButtonWidget(ID_RELOAD, this.width / 2 - 62, this.height - 28, 110, 20, "Reload"));
+        this.buttons.add(new ButtonWidget(ID_DONE, this.width / 2 + 52, this.height - 28, 128, 20, "Done"));
     }
 
     private void clampScroll(int count) {
@@ -162,6 +165,11 @@ public final class ModMenuScreen extends Screen {
             // Discards unsaved fiddling and re-reads the file, including hand edits.
             ModuleRegistry.reload();
             this.init();
+            return;
+        }
+        if (button.id == ID_PROFILES) {
+            ModuleRegistry.save();
+            this.client.setScreen(new ProfilesScreen());
             return;
         }
         if (button.id == ID_EDIT_HUD) {

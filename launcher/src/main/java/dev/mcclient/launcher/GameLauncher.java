@@ -26,10 +26,21 @@ public final class GameLauncher {
 
     private final HttpClient http;
     private final ModManager mods;
+    private final GameLog log;
 
     public GameLauncher(HttpClient http, ModManager mods) {
+        this(http, mods, new GameLog(LauncherPaths.root().resolve("logs").resolve("game-latest.log"), true));
+    }
+
+    public GameLauncher(HttpClient http, ModManager mods, GameLog log) {
         this.http = http;
         this.mods = mods;
+        this.log = log;
+    }
+
+    /** The captured game output, so a caller can show a crash instead of just an exit code. */
+    public GameLog log() {
+        return log;
     }
 
     /**
@@ -125,8 +136,22 @@ public final class GameLauncher {
 
         ProcessBuilder pb = new ProcessBuilder(command);
         pb.directory(gameDir.toFile());
-        pb.inheritIO();
-        return pb.start();
+        // Merged rather than inherited: the game's output is what tells you why it died, and
+        // inheriting sent it wherever the launcher happened to be started from -- nowhere at all
+        // when that was a desktop shortcut.
+        pb.redirectErrorStream(true);
+        Process process = pb.start();
+
+        log.startNewFile();
+        log.pump(process.getInputStream());
+        process.onExit().thenRun(new Runnable() {
+            @Override
+            public void run() {
+                log.append("[launcher] game exited with code " + process.exitValue());
+                log.close();
+            }
+        });
+        return process;
     }
 
     private static String resolveJavaBinary() {

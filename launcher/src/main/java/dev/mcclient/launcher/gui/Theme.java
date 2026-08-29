@@ -123,6 +123,40 @@ public final class Theme {
                 pad(14, 16, 14, 16));
     }
 
+    /**
+     * Dark-themes a scroll pane and stops it scrolling sideways. Swing's default scrollbars are a
+     * light-grey Windows control, which reads as a bug against this palette.
+     */
+    public static void styleScroll(javax.swing.JScrollPane scroll) {
+        scroll.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
+        scroll.getViewport().setBackground(BG);
+        scroll.getVerticalScrollBar().setBackground(SURFACE);
+        scroll.getVerticalScrollBar().setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
+            @Override
+            protected void configureScrollBarColors() {
+                this.thumbColor = SURFACE_ALT;
+                this.trackColor = SURFACE;
+            }
+
+            @Override
+            protected javax.swing.JButton createDecreaseButton(int orientation) {
+                return zeroButton();
+            }
+
+            @Override
+            protected javax.swing.JButton createIncreaseButton(int orientation) {
+                return zeroButton();
+            }
+
+            private javax.swing.JButton zeroButton() {
+                javax.swing.JButton button = new javax.swing.JButton();
+                button.setPreferredSize(new Dimension(0, 0));
+                return button;
+            }
+        });
+    }
+
     /** Makes a component respond to clicks without looking like a button. */
     public static void onClick(JComponent component, Runnable action) {
         component.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));

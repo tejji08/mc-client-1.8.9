@@ -25,6 +25,8 @@ The client's own features live in one jar (`mods/mcclient-mods`) as **16 modules
 
 Every HUD panel carries the same six controls -- **position, size, text colour, background on/off, background opacity, text shadow** -- because they live on the shared `HudModule` base rather than being re-declared per module. Size is a continuous slider from 0.5x to 3x; zoom amount and fullbright brightness are sliders too.
 
+**HUD profiles** live under `config/mcclient/`, one properties file each, with the active one named in `active.txt`. Switch, create and delete them from the Profile button in the menu -- a new profile starts as a copy of the layout on screen, since you are nearly always branching one you already like. Plain files on purpose: a profile can be copied to a friend or kept in version control without the client being involved.
+
 **Right Shift** opens the settings menu, **Right Control** the HUD editor; both keys are rebindable and every module can be bound to its own toggle key. Both menu columns scroll -- sixteen modules with eight settings each stopped fitting on one screen. **Reload config** re-reads the file from disk, which also picks up hand edits to `config/mcclient.properties`.
 
 Numeric settings get a real slider. Keybinds are the exception: cycling a hundred key codes a click at a time would be useless, so they capture the next key you press (Escape clears).
@@ -47,6 +49,11 @@ Each subproject under `mods/` is a normal Fabric mod (`fabric.mod.json` + a `Mod
 
 ### Enabling real sign-in
 The launcher needs its own Azure AD app registration (public client, personal Microsoft accounts, device-code flow enabled) — see the instructions at the top of `auth/Config.java`. Once you have a client ID, either set env var `MC_CLIENT_AZURE_APP_ID` or drop it into `%APPDATA%\mc-client-1.8.9\azure-client-id.txt`.
+
+### Launcher panels
+**Logs** shows the game's own output live, with buttons to open the log folder and Minecraft's crash-reports folder. The launcher used to inherit the game's stdio, which sent the log wherever the launcher happened to be started from -- and nowhere at all from a desktop shortcut. Output is now captured to `logs/game-latest.log` and kept in memory; on a non-zero exit the Play tab prints the last fifteen lines rather than just an exit code.
+
+**Privacy** lists every host this client is capable of contacting, what each is for, when it happens, and whether the request identifies you -- plus a flat statement of what the client never does. The list is compiled from the URL literals in this source tree, and the panel tells you the `grep` to check it yourself. It is the one page a commercial client structurally cannot ship, because its business is the data the page would have to list.
 
 ## Building
 

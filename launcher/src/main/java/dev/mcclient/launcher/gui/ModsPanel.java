@@ -47,8 +47,7 @@ final class ModsPanel extends JPanel {
 
         JScrollPane scroll = new JScrollPane(list);
         scroll.setBorder(BorderFactory.createEmptyBorder());
-        scroll.getViewport().setBackground(Theme.BG);
-        scroll.getVerticalScrollBar().setUnitIncrement(16);
+        Theme.styleScroll(scroll);
 
         add(header(), BorderLayout.NORTH);
         add(scroll, BorderLayout.CENTER);
